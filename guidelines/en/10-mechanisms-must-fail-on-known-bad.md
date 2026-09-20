@@ -11,3 +11,14 @@
 ① the "bad version" used as the known-bad input **must be obtained from a historical version into a temporary path** (see guideline 03), and **files must not be modified in place**;
 ② make the list come from an **independent basis**, and make the assertion **closed** (hits ∪ known exceptions == the full set), so that all three of "criterion degraded / strengthened / permanently empty" go red;
 ③ the guard's **output must be reconciled against an authoritative source**.
+
+**⚠️ One more (an even more upstream form of this guideline): if the verifier itself crashes, that is "unverified" -- NOT "passed".**
+
+**Measured**: I wrote a script to check a count claim. The script **never ran at all** because of a syntax error, so it produced **no output** -- and I **did not notice the output was missing**, and committed the claim anyway. **=> The claim shipped in a public artifact, never once checked.**
+
+**=> Criterion**: **for any "claim + verifier" pair, a verifier that produced nothing == the claim is unverified.**
+**Missing output, an error, a non-zero exit -- all three must stop the claim**, not let the process continue.
+**⚠ The most dangerous case is "no output"** -- it looks like "it ran fine".
+
+**=> Self-check**: after running a verifier, ask
+**"Where is its output? Is what I am looking at written by it, or what I assumed it would write?"**
