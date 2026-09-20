@@ -71,6 +71,36 @@ def begin_line(teams: str = TEAMS_DEFAULT) -> str:
     return f"<!-- agent-lessons:BEGIN v{VERSION} teams={teams} -->"
 
 
+def ask_teams() -> str:
+    """首次安装时问一句 —— **抽成纯函数是为了能被喂靶**（准则 10）。
+
+    ⚠ 原来这段直接写在 `cmd_install` 里，那段代码用管道测不到（造不出真 TTY）
+      ⇒ 「没被喂过的分支」= 风险。抽出来之后就能拿已知输入验。
+    """
+    print("首次安装 —— agent teams 策略（可随时用 `--teams=...` 改）：")
+    print("  [1] ask    需要并行时**先问你**（推荐，默认）")
+    print("  [2] always 需要并行时**自己开**分身/队员")
+    print("  [3] never  **不开**分身/队员，全部自己做")
+    try:
+        _ans = input("选择 [1/2/3，回车=ask]：").strip()
+    except (EOFError, KeyboardInterrupt):
+        _ans = ""
+    return {"1": "ask", "2": "always", "3": "never"}.get(_ans, TEAMS_DEFAULT)
+
+
+def _is_tty() -> bool:
+    """**非 TTY 绝不能问问题** —— 否则 CI / 脚本 / 管道调用会把安装器卡死。
+
+    ⚠ 每一项都要 try：`sys.stdin` 可能是 `None`（pythonw）、可能没有 `isatty`
+      （被替换成别的对象）、`isatty()` 本身也可能抛。
+      **判据是"能确认它是终端"，不是"没报错"** —— 拿不准就当**不是**终端。
+    """
+    try:
+        return bool(sys.stdin is not None and sys.stdin.isatty())
+    except Exception:
+        return False
+
+
 def teams_of(text: str) -> str:
     """从**已存在的** BEGIN 行读回策略；读不到或非法 ⇒ 取默认。
 
@@ -446,7 +476,16 @@ def cmd_install(a) -> int:
     #   否则「重装但不带 --teams」会把用户上次的选择悄悄重置成默认 ——
     #   那是「升级路径有损」，与 `teams_of` 的注释是同一条判据。
     old = _read(tgt)
-    _teams = getattr(a, "teams", None) or teams_of(old)
+    # ⚠ 「让用户**一开始就**决定」—— 光有 `--teams` 参数不够：**参数要人知道才会用**。
+    #   ⇒ 首次安装（块还不存在）且在**真终端**上时，直接问一句。
+    #   ⚠ 非 TTY（CI / 脚本 / 管道）**绝不问**，否则安装器会把自动化卡死。
+    #   ⚠ 已经有块 ⇒ **不重问**（沿用），否则 `sync` 每次都会打断。
+    _given = getattr(a, "teams", None)
+    _has_block = bool(BEGIN_RE.search(old or ""))
+    # 非首次 ⇒ `teams_of(old)` 读回用户上次的选择；首次 ⇒ 它返回默认值。
+    _teams = _given or teams_of(old)
+    if _given is None and not _has_block and _is_tty():
+        _teams = ask_teams()
     block = render_block(a.lang, _teams)
     try:
         new = apply_block(old, block)
@@ -745,6 +784,33 @@ def cmd_selfcheck(a) -> int:
         "策略只写进 BEGIN 行**和**正文各一处":
             all(render_block("zh", t).count(f"teams={t}") == 1 for t in TEAMS_POLICIES),
     }
+    # ⚠ 交互询问那一支**必须被喂**：它原来写在 `cmd_install` 里，用管道测不到
+    #   （造不出真 TTY）⇒ 会成为"没被喂过的分支"。抽成 `ask_teams()` 就是为了这个。
+    import builtins as _bi
+    import contextlib as _cx
+    import io as _io
+
+    def _feed(ans):
+        _orig = _bi.input
+        def _fake(*_a, **_k):
+            if ans is None:
+                raise EOFError
+            return ans
+        _bi.input = _fake
+        try:
+            with _cx.redirect_stdout(_io.StringIO()):
+                return ask_teams()
+        finally:
+            _bi.input = _orig
+
+    _t_ok.update({
+        "交互：'1'/'2'/'3' ⇒ 三个取值各自对上":
+            (_feed("1"), _feed("2"), _feed("3")) == ("ask", "always", "never"),
+        "交互：直接回车 ⇒ 默认（不是空串）": _feed("") == TEAMS_DEFAULT,
+        "交互：乱输 ⇒ 退回默认（**不崩、不猜**）": _feed("随便打点什么") == TEAMS_DEFAULT,
+        "交互：EOF/中断 ⇒ 退回默认（**不能卡住**）": _feed(None) == TEAMS_DEFAULT,
+        "交互：带空格的输入被 strip": _feed("  2  ") == "always",
+    })
     for name, good in _t_ok.items():
         print(f"    {'[OK]' if good else '[!!]'} {name}")
         if not good:
