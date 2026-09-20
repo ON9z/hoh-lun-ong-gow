@@ -22,3 +22,33 @@
 
 **=> Self-check**: after running a verifier, ask
 **"Where is its output? Is what I am looking at written by it, or what I assumed it would write?"**
+
+**⚠ One step earlier: when a guard's precondition fails inside an `if`, there is not even "no output".**
+
+**Measured (the third instance of one shape)**:
+```python
+if tool.exists() and anchors_present:      # <- no else
+    try:   ...run the check...
+    except Exception as e: print("[!!] could not run"); bad += 1
+```
+**=> Tool deleted or renamed => the whole `if` body is skipped => nothing printed, counted as 0 =>
+the caller reports "everything passed".**
+And **the comment above it said** "tool missing/broken => report it, **do not silently treat it as
+passing**" -- **the comment described a behaviour the code did not have.**
+
+**=> Criterion**: **a guard whose entry condition does not hold is in the same state as a guard that
+failed -- both must go red.**
+```python
+if not precondition:  report_red(); bad += 1
+else:                 try: … except: report_red(); bad += 1
+```
+
+**⚠ Same family (all measured)**:
+- a health check wrapped in `if X is not None:` => **when the guarded object does not exist the
+  check never engages, i.e. zero self-healing**;
+- the previous guard's `if not path.exists(): return {}` => **when the file is absent it silently
+  returns "no problem"**;
+- this one.
+
+**=> What they share**: **writing "did not check" as "check passed"** -- and the two produce
+**identical output**.
