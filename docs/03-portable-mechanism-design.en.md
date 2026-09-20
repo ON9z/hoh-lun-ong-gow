@@ -200,13 +200,21 @@ irreversible**."
 
 **⚠ While here, one plausible criterion to reject outright**: "the two sides must have equal
 non-empty line counts per section". **It is simply false** -- measured in this repository
-(**caliber = non-empty lines, read at commit `81e08a4`**):
+(**caliber = non-empty lines**):
 ```
 01   CN 303 / EN 448    (1.48x)
 02   CN 283 / EN 362    (1.28x)
 ```
 **Chinese and English line counts are simply not equal** (one Chinese paragraph becomes longer in
 English) => that criterion would fire on **every** section.
+
+⚠ **This line used to read "read at commit `81e08a4`" -- and that SHA no longer exists**
+(this repository **rebuilt its history** to purge a leak from the commit messages).
+**=> It falsifies the remedy I gave earlier: pinning to a version is not enough -- versions get
+rewritten too.** A timestamp is not enough; a commit hash is not enough; **any reference to
+"the state at some particular moment" expires when maintenance touches it.**
+=> So only the **caliber** is kept, no version. **Every reader reads it at a different commit --
+which is precisely what this section is about.**
 
 ⚠ **I deliberately leave doc 03's row out** -- it changes every time this section is edited
 (**this section lives inside doc 03**). **Which is trap 2 below**: a number starts going stale the
