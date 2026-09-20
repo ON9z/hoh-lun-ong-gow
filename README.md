@@ -1,6 +1,173 @@
+**language/语言：** [English](#english) · [简体中文](#zh-cn) · [繁體中文](#zh-tw)
+
+---
+
+<a id="english"></a>
+# Failure modes and mechanism-building in agent collaboration
+
+
+Three sets of **field observations** from **long-term engineering collaboration** between one user
+and an AI agent (weeks, thousands of tool calls).
+
+**They are not benchmarks; they are a case series.** They contain no specific project, business,
+data, or identity information.
+
+---
+
+## Contents
+
+| File | Contents |
+|---|---|
+| [`docs/01-failure-modes-in-long-horizon-collaboration.en.md`](docs/01-failure-modes-in-long-horizon-collaboration.en.md) | **Failure modes classified by capability dimension**: instruction following / long-context retrieval / tool use / code generation and self-modification / reasoning / factuality and metacognition / multi-step and agentic collaboration. Each entry has: symptom · minimal reproduction · mitigation · suggestion for model developers |
+| [`docs/02-mechanisms-for-ai-assisted-engineering.en.md`](docs/02-mechanisms-for-ai-assisted-engineering.en.md) | **A set of practices for turning "criticism and lessons" into mechanisms**: the four-gates criterion / automatic guideline injection / a dictionary of error types / a checklist-reconciliation hook / a dispatch template / **criteria and counterexamples for using subagents and teams** / prediction expiry / authorization boundaries / a single source of truth / mechanism self-proof |
+| [`docs/03-portable-mechanism-design.en.md`](docs/03-portable-mechanism-design.en.md) | **Making mechanisms work across agents**: the host capability matrix / **the five-layer design L0–L4** / why the **commit hook** is the broadest common ground across agents / capability probing / per-layer self-proof / privacy (the diagnostic bundle carries structure, not content) |
+
+---
+
+## Why it is worth reading (if you are building agents or doing long-term AI collaboration)
+
+Common evaluations cut tasks into **single-turn, stateless questions with a unique correct
+answer**. The real properties of long-term collaboration are different:
+
+| Dimension | Common evaluation | Long-horizon engineering collaboration |
+|---|---|---|
+| Turns | 1 | hundreds–thousands, **context gets compacted** |
+| State | none | **present** (files, databases, uncommitted artifacts, background processes) |
+| Correctness | a single point | **process correctness** ("was done" ≠ "was done right") |
+| Feedback | immediate | **delayed and partial** |
+| Tools | none / few | **many, and with side effects** |
+
+**⇒ Most of the failures recorded here are invisible in single-turn evaluation — some would even
+be scored as "correct".**
+
+---
+
+## Three things you can take away immediately
+
+**1. The four gates** (from two real counterexamples in one measurement)
+> **Between "built" and "takes effect" stand four gates: ① it is called ② it finishes within
+> budget ③ it actually appears in the output that is consumed ④ someone will read it.**
+> **If any gate is not passed, the mechanism does not exist — and it still gives people the
+> illusion that they "already have it".**
+>
+> **Acceptance criterion: "If it dies / it doesn't run / it gets cut off, who knows?" If you
+> cannot answer, gates three and four are not passed.**
+
+**2. Push verification from the first level to the second**
+> Not "I did it", but "**it actually took effect, it was seen, and it also holds in the opposite
+> direction**".
+> Measured: **7 checks that "a criterion can be vacuously satisfied"** were found in a single day
+> (unit mismatch / insufficient coverage / finite resampling returning 0 / resolution
+> insufficient to reach the threshold / allowlist shape / a terminal-state marker hung on a
+> periodic task / paging without completeness verification).
+> **The criterion: "Under what input would this criterion be false?" — if you cannot answer
+> that, it may be always true.**
+
+**3. When you require an action, you must also give the "permitted way to implement it"**
+> A task brief said only "you must verify with a known-bad version that your check fails",
+> **without saying "how to obtain it"**
+> ⇒ the executor **modified a production file in place** to manufacture the bad version, the
+> command timed out and was moved to the background ⇒ **the restore step never ran**
+> ⇒ the working tree was left **in the broken state** with no indication.
+
+---
+
+## Install (**executable, not just documentation**)
+
+This repository ships an installer that puts the 12 engineering guidelines into your agent's
+configuration, **idempotently and with exact uninstall**.
+
+```bash
+sh    install/install.sh    install --agent claude            # dry-run first; see what it would change
+sh    install/install.sh    install --agent claude --apply    # actually write
+powershell -File install/install.ps1 status                   # Windows
+install\install.cmd status                                     # cmd.exe
+```
+`--agent` accepts `claude` / `codex` / `cursor` / `generic` (the last one just needs a directory).
+
+**⇒ After installing, run `install/core.py selfcheck` first** — the installer **must be verified
+too**; it will tell you which layers did or did not get installed.
+`install/core.py report` generates a diagnostic bundle that is **structure-only and
+content-free**, for pasting into an issue.
+
+### Three decisions to make from the start
+
+| Decision | How to make it |
+|---|---|
+| **agent teams policy** | `--teams=always` (spawn subagents/teammates yourself when needed) / **`ask` (the default: ask you first, every time)** / `never` (do not spawn). **If omitted, your previous choice is kept** — upgrading will not reset your setting. |
+| **Which layers to install** | The installer **probes** how far up your host is supported (see `docs/03`), **installs only what it can, and faithfully reports which layer did not get installed**. |
+| **Commit hook** | Installed by default (it only writes into `.git/hooks/`, local and reversible). It is **the only layer that does not depend on the host and can genuinely say "no"**. |
+
+## Prerequisites and **what it does not depend on**
+
+**There is only one prerequisite: `git`** (used for the L2 commit hook). Python 3.8+ is needed
+only by the installer, and **nothing here goes online**.
+
+**Explicitly not depended on** (this column matters more than the one above):
+
+- ⛔ **Not dependent on any particular vendor or model** — these observations come from
+  long-term collaboration, and **they still apply if you change model or change agent**;
+- ⛔ **No API key, no paid service, no network access**;
+- ⛔ **Not dependent on skill packages such as superpowers** — the mechanisms here are **plain
+  text plus a git hook**, usable by any agent that can read a file at the project root (plain
+  API calls have a corresponding layer too — see the capability matrix in `docs/03`);
+- ⛔ **You are not required to hand your workflow over to it** — uninstalling is one command,
+  and the original text is restored exactly (`selfcheck` includes idempotence and restore
+  cases).
+
+## Feedback
+
+**Problems, counterexamples, and "this criterion of yours does not hold in my setting"** are all
+welcome:
+
+- **Bug / cannot install**: use [a new issue](../../issues/new?template=bug_report.yml),
+  **and please paste the output of `install/core.py report`** (it contains only structure and
+  hashes: version, OS, which layers are installed, the target's path and whether it is writable,
+  the block's length and hash).
+  **⚠ Do not paste the contents of your configuration file** — it may contain other people's
+  private content.
+- **Adding or changing a guideline**: use [a guideline proposal](../../issues/new?template=guideline_proposal.yml).
+  **A guideline must carry a `判据：` line** (one executable, falsifiable sentence) — a guideline
+  without one is marked not-actionable by `selfcheck`.
+- **Pre-publication self-check**: `python tools/leak_scan.py` — it scans the **working tree +
+  the entire commit history + commit messages**, three media.
+  **"The working tree is clean" ≠ "the repository is clean".**
+
+---
+
+## Boundaries (**discount accordingly**)
+
+- **No control group, no fixed task set, no repeated measurement** ⇒ **no cross-model comparison
+  can be made from this.**
+- **Only failures are recorded; the large amount of successful collaboration from the same
+  period is not** ⇒ **a deliberate selection bias.**
+- **A single user's single setting**; generality is unverified.
+- **Some failures are strongly tied to the agent framework** (context compaction, subagent
+  collaboration) and are not purely model behavior.
+
+### ⚠️ What to know before using it (**disclaimer**)
+
+- **The installer will change your agent configuration files** (`~/.claude/CLAUDE.md`,
+  `AGENTS.md` and the like). It **defaults to dry-run** (nothing is written without `--apply`),
+  it is **idempotent**, and it is **exactly uninstallable** (`selfcheck` includes restore cases),
+  **but it does change your files** — **review the diff first, back up yourself, and use at your
+  own risk** (the `AS IS` clause of `LICENSE` applies).
+- **This repository is one user's personal record of observations. It is not official material
+  from any vendor, and it does not represent any vendor's position.**
+- **The commit hook will block commits** (that is its design purpose). It has two escape
+  hatches: `--no-verify` and `AGENT_LESSONS_STRICT=0`.
+
+---
+
+## License
+
+See [`LICENSE`](LICENSE).
+
+---
+
+<a id="zh-cn"></a>
 # Agent 协作的失效模式与机制建设
 
-**[English](README.en.md) · 简体中文**
 
 三份**实践观察**，来自一名使用者与 AI Agent 的**长期工程协作**（数周、上千次工具调用）。
 
@@ -124,3 +291,134 @@ install\install.cmd status                                     # cmd.exe
 ## 许可
 
 见 [`LICENSE`](LICENSE)。
+
+---
+
+<a id="zh-tw"></a>
+# Agent 協作的失效模式與機制建設
+
+
+三份**實踐觀察**，來自一名使用者與 AI Agent 的**長期工程協作**（數週、上千次工具呼叫）。
+
+**它們不是基準測試，是案例集。** 不含任何具體專案、業務、資料或身分資訊。
+
+---
+
+## 目錄
+
+| 檔案 | 內容 |
+|---|---|
+| [`docs/01-failure-modes-in-long-horizon-collaboration.md`](docs/01-failure-modes-in-long-horizon-collaboration.md) | **按能力維度分類的失效模式**：指令遵循 / 長上下文檢索 / 工具使用 / 程式碼生成與自我修改 / 推理 / 事實性與自我評估 / 多步與代理協作。每條含：現象 · 最小重現 · 緩解 · 對模型方的建議 |
+| [`docs/02-mechanisms-for-ai-assisted-engineering.md`](docs/02-mechanisms-for-ai-assisted-engineering.md) | **把「批評教訓」變成機制的一套做法**：四道門判據 / 準則自動注入 / 錯誤類型字典 / 清單對帳鉤子 / 派工模板 / **子 Agent 與團隊的使用判據與反例** / 預測到期 / 授權邊界 / 單一事實源 / 機制自證 |
+| [`docs/03-portable-mechanism-design.md`](docs/03-portable-mechanism-design.md) | **讓機制跨 Agent 生效**：宿主能力矩陣 / **五層設計 L0–L4** / 為什麼**提交鉤子**是跨 Agent 的最大公約數 / 能力偵測 / 逐層自證 / 隱私（診斷包只含結構不含內容） |
+
+---
+
+## 為什麼值得看（如果你在做 Agent 或做長期 AI 協作）
+
+常見評測把任務切成**單輪、無狀態、有唯一正確答案**的題。而長期協作的真實特點是：
+
+| 維度 | 常見評測 | 長程工程協作 |
+|---|---|---|
+| 回合數 | 1 | 數百~數千，**上下文會被壓縮** |
+| 狀態 | 無 | **有**（檔案、資料庫、未提交產物、背景處理程序） |
+| 正確性 | 單點 | **過程正確性**（「做過了」 ≠ 「做對了」） |
+| 回饋 | 立刻 | **延遲且部分** |
+| 工具 | 無 / 少量 | **大量，且帶副作用** |
+
+**⇒ 本文記錄的失效，絕大多數在單輪評測裡看不見，甚至會被判為「正確」。**
+
+---
+
+## 三條可以立刻帶走的
+
+**1. 四道門**（來自一次實測的兩個反例）
+> **「建了」與「生效」之間隔著四道門：①被呼叫 ②在預算內跑完 ③真正出現在被消費的輸出裡 ④有人會讀它。**
+> **任一未過，機制等於不存在 —— 而它還會給人「已經有了」的錯覺。**
+>
+> **驗收判據：「它死了 / 它沒跑 / 它被截了，誰知道？」答不出來，就是沒過第三、四道門。**
+
+**2. 把驗證從第一層推到第二層**
+> 不是「我做了」，而是「**它真的生效了、被看見了、且在反方向上也成立**」。
+> 實測一天內發現 **7 個「判據可被空滿足」**的檢查（因次不匹配 / 覆蓋率不足 / 有限次重取樣傳回 0 /
+> 解析度不足以達到閾值 / 允許清單形狀 / 終態標記掛在週期任務上 / 翻頁不驗證完整性）。
+> **判據：「這個判據在什麼輸入下會為假？」—— 答不出來，它可能恆真。**
+
+**3. 要求一個動作，必須同時給出「允許的實作方式」**
+> 一份任務書只寫「必須拿已知壞版本驗證你的檢查會失敗」，**沒寫「怎麼拿」**
+> ⇒ 執行方**原地修改了生產檔案**製造壞版本，指令逾時被移到背景 ⇒ **還原那一步沒跑到**
+> ⇒ 工作區留在**被改壞的狀態**且無提示。
+
+---
+
+## 安裝（**可執行，不只是文件**）
+
+本倉庫帶一個安裝器，把 12 條工程準則裝進你的 Agent 設定，並**冪等、可精確解除安裝**。
+
+```bash
+sh    install/install.sh    install --agent claude            # 先 dry-run，看它要改什麼
+sh    install/install.sh    install --agent claude --apply    # 真的寫
+powershell -File install/install.ps1 status                   # Windows
+install\install.cmd status                                     # cmd.exe
+```
+`--agent` 支援 `claude` / `codex` / `cursor` / `generic`（後者只需給一個目錄）。
+
+**⇒ 裝完先跑 `install/core.py selfcheck`** —— 安裝器**自己也要被驗**，它會告訴你每一層裝沒裝上。
+`install/core.py report` 生成**只含結構、不含內容**的診斷包，用於貼 issue。
+
+### 三條你一開始就要做的決定
+
+| 決定 | 怎麼定 |
+|---|---|
+| **agent teams 策略** | `--teams=always`（需要就自己開分身）/ **`ask`（預設：每次先問你）** / `never`（不開）。**不給則沿用上次的選擇**，升級不會把你的設定重設。 |
+| **裝哪幾層** | 安裝器**偵測**你的宿主支援到第幾層（見 `docs/03`），**只裝能裝的，並如實報告哪層沒裝上**。 |
+| **提交鉤子** | 預設裝（它只寫進 `.git/hooks/`，本機、可逆）。它是**唯一不依賴宿主、又能真的說「不」**的一層。 |
+
+## 前置與**不依賴**
+
+**前置只有一條：`git`**（用於 L2 提交鉤子）。Python 3.8+ 僅安裝器需要，**全程不連網**。
+
+**明確不依賴**（這一欄比上面那欄重要）：
+
+- ⛔ **不依賴任何特定廠商或模型** —— 這些觀察來自長期協作，**換模型/換 Agent 依然適用**；
+- ⛔ **不需要 API key、不需要付費服務、不需要連網**；
+- ⛔ **不依賴 superpowers 之類的技能套件** —— 本倉庫的機制是**純文字 + git 鉤子**，
+  任何能讀專案根目錄檔案的 Agent 都用得上（純 API 呼叫也有對應層，見 `docs/03` 的能力矩陣）；
+- ⛔ **不要求你把工作流程交給它** —— 解除安裝一行指令，原文精確還原（`selfcheck` 裡有冪等與還原測試案例）。
+
+## 回饋
+
+**問題、反例、以及「你這條判據在我這裡不成立」**，都歡迎：
+
+- **Bug / 裝不上**：用 [新 issue](../../issues/new?template=bug_report.yml)，
+  **請貼上 `install/core.py report` 的輸出**（它只含結構與雜湊：版本、系統、裝了哪層、目標的路徑與是否可寫、區塊的長度與雜湊）。
+  **⚠ 不要貼設定檔內容** —— 那裡面可能有別人的私密內容。
+- **新增/修改一條準則**：用 [準則提案](../../issues/new?template=guideline_proposal.yml)。
+  **準則必須帶「判据：」行**（一句可執行、可證偽的話）—— 沒有判據的準則會被 `selfcheck` 標為不可執行。
+- **發布前自檢**：`python tools/leak_scan.py` —— 它掃**工作區 + 全歷史提交 + 提交資訊**，
+  三類介質。**「工作區乾淨」≠「倉庫乾淨」。**
+
+---
+
+## 邊界（**請據此打折**）
+
+- **無對照組、無固定任務集、無重複測量** ⇒ **不能據此做模型間比較。**
+- **只記錄失效，不記錄同期大量成功的協作** ⇒ **明確的選擇偏差。**
+- **單一使用者的單一情境**，通用性未驗證。
+- **部分失效與 Agent 框架強相關**（上下文壓縮、子 Agent 協作），不完全是模型行為。
+
+### ⚠️ 使用前請知道的（**免責**）
+
+- **安裝器會改動你的 agent 設定檔**（`~/.claude/CLAUDE.md`、`AGENTS.md` 之類）。
+  它**預設 dry-run**（不加 `--apply` 不寫任何東西）、**冪等**、**可精確解除安裝**（`selfcheck` 裡有還原測試案例），
+  **但它改的是你的檔案** —— **請先看 diff、自行備份、自負風險**（`LICENSE` 的 `AS IS` 條款適用）。
+- **本倉庫是使用者個人的觀察記錄，不是任何廠商的官方材料，也不代表任何廠商的立場。**
+- **提交鉤子會阻擋提交**（這是它的設計目的）。它有 `--no-verify` 與 `AGENT_LESSONS_STRICT=0` 兩個逃生出口。
+
+---
+
+## 授權
+
+見 [`LICENSE`](LICENSE)。
+
+---

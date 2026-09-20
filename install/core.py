@@ -144,6 +144,40 @@ GUIDELINES = ROOT / "guidelines"
 DOCS = ROOT / "docs"
 
 
+README_ANCHOR = re.compile(r'<a id="([a-z-]+)"></a>')
+
+
+def readme_lang_sections(path: Path) -> dict[str, tuple[int, int, int]]:
+    """`README.md` 里每个语段的 (`##` 数, `###` 数, `---` 数)，按 `<a id="...">` 锚点切分。
+
+    ⚠ **第三项 `---` 是必须的** —— 第一版只返回 (##, ###)，**把老守卫已经修好的一维又开了**：
+    同一个 `doc_parity_problems.shape()` 里明明有 `^---\\s*$`，而它的 docstring 写着为什么加：
+    「第一版只数 ##/### 时漏掉了真事：中文版留了连续两条 `---`，守卫报"一致"」
+    —— **同一位作者、同一个文件、隔一天，在新判据上重犯了同一个缺口。**
+    ⚠ 是外部复核方（`docs-en-translate`）量出来的：三段当时是 `--- 7 / 7 / 1`，**本守卫对此完全沉默**。
+    **⇒ 判据的宽度决定了它能看见什么** —— 换个判据不等于可以少一维。
+
+
+    ⚠ 为什么**换掉**原来那条「`README.md` ↔ `README.en.md` 对偶」：
+      要求是**语言切换点了不跳转、留在仓库主界面**。而 GitHub 主页面只渲染 `README.md`
+      **一个**文件 —— 指向别的文件的链接必然跳到 `/blob/...` 文件视图。
+      ⇒ 唯一可行的做法：**三语放进同一个文件、用页内锚点切换**。
+      ⇒ 于是「两份文件对偶」这个判据消失了，但**「结构必须相等」是同一个不变式，而且更强**：
+        不再是"两份相等"，而是"**每一段的 `##` 与 `###` 都相等**"。
+    """
+    if not path.exists():
+        return {}
+    t = path.read_text(encoding="utf-8")
+    parts = README_ANCHOR.split(t)
+    out: dict[str, tuple[int, int, int]] = {}
+    for i in range(1, len(parts) - 1, 2):
+        body = parts[i + 1]
+        out[parts[i]] = (len(re.findall(r"^## ", body, re.M)),
+                         len(re.findall(r"^### ", body, re.M)),
+                         len(re.findall(r"^---\s*$", body, re.M)))
+    return out
+
+
 def doc_parity_problems(docs: Path, exclude: set[str] | None = None) -> list[str]:
     """中/英文档的**结构对偶**检查：`XX.md` 与 `XX.en.md` 的 `##`/`###` 数必须相等。
 
@@ -843,6 +877,33 @@ def cmd_selfcheck(a) -> int:
         if not good:
             bad += 1
 
+    # ⚠ 2026-09-21 换判据后**必须重新喂靶** —— 新判据没被喂过 = 风险（准则 10）。
+    (_dtmp / "lang_ok.md").write_text(
+        '<a id="en"></a>\n## A\n### A1\n## B\n\n<a id="cn"></a>\n## 甲\n### 甲1\n## 乙\n',
+        encoding="utf-8")
+    (_dtmp / "lang_bad.md").write_text(
+        '<a id="en"></a>\n## A\n### A1\n## B\n\n<a id="cn"></a>\n## 甲\n',   # 少一个 ##
+        encoding="utf-8")
+    # ⚠ **专为第三项 `---` 加的喂靶** —— 外部复核方指出第一版漏了这一维，
+    #   而"补上但没喂靶"= 新的一维同样没被验证过（准则 10）。
+    (_dtmp / "lang_sep.md").write_text(
+        '<a id="en"></a>\n## A\n\n---\n\n## B\n\n<a id="cn"></a>\n## 甲\n## 乙\n',
+        encoding="utf-8")
+    _lok = readme_lang_sections(_dtmp / "lang_ok.md")
+    _lbad = readme_lang_sections(_dtmp / "lang_bad.md")
+    _lsep = readme_lang_sections(_dtmp / "lang_sep.md")
+    _lang_cases = {
+        "多语段：两段相等 ⇒ 不报": len(set(_lok.values())) == 1 and len(_lok) == 2,
+        "多语段：有一段少一个 ## ⇒ 报（**判据不是恒真的**）":
+            len(set(_lbad.values())) > 1,
+        "多语段：**只有 `---` 数不同 ⇒ 也要报**（第三项不是摆设）":
+            len(set(_lsep.values())) > 1,
+    }
+    for name, good in _lang_cases.items():
+        print(f"    {'[OK]' if good else '[!!]'} 喂靶：{name}")
+        if not good:
+            bad += 1
+
     _real = doc_parity_problems(DOCS)
     print(f"    {'[OK]' if not _real else '[!!]'} 真目录 docs/："
           + ("中英结构一致" if not _real else f"{len(_real)} 处漂移"))
@@ -850,16 +911,50 @@ def cmd_selfcheck(a) -> int:
         print(f"         · {p}")
     bad += len(_real)
 
-    # ⚠ 2026-09-21 扩到**仓库根目录**：`README.md` 也要有 `.en.md` 对偶。
-    #   原来只查 `docs/` —— 而 README 是**别人打开仓库看到的第一屏**，比第五节译砸了贵得多。
-    #   ⚠ 必须排除 `AGENTS.md`：它是安装器**派生**出来的（由 guidelines 生成），
-    #     **不是一篇需要人工维护对偶的文档** —— 不排除就会每次都报「缺 AGENTS.en.md」的假阳性。
-    _root = doc_parity_problems(ROOT, exclude={"AGENTS.md"})
-    print(f"    {'[OK]' if not _root else '[!!]'} 仓库根目录："
-          + ("中英结构一致" if not _root else f"{len(_root)} 处漂移"))
-    for p in _root:
-        print(f"         · {p}")
-    bad += len(_root)
+    # ⚠ 2026-09-21 换判据：原来是「`README.md` ↔ `README.en.md` 对偶」，
+    #   现改为「**单个 `README.md` 里各语段的 `##`/`###` 必须相等**」。
+    #   起因：用户要求语言切换**点了不跳转、留在主界面** ⇒ 三语必须合进一个文件
+    #   ⇒ 「两份文件」这个对偶对象不存在了，但**「结构相等」这个不变式仍在，且更强**。
+    #   ⚠ 不再对根目录跑 `doc_parity_problems`：那样会报「README.md 缺 README.en.md」假阳性
+    #     （那个文件已被有意删除）。`AGENTS.md` 是派生文件，本来就不参与。
+    _langs = readme_lang_sections(ROOT / "README.md")
+    if not _langs:
+        print("    [--] README.md：没找到 `<a id=...>` 语段锚点（跳过）")
+    else:
+        _vals = set(_langs.values())
+        _ok = len(_vals) == 1
+        print(f"    {'[OK]' if _ok else '[!!]'} README.md 各语段结构："
+              + (f"全部相等 {sorted(_vals)[0]}" if _ok else f"**不相等** {dict(_langs)}"))
+        if not _ok:
+            print("         ⇐ 三段是同一份文档的三种语言，`##`/`###` 数本就该相等")
+            bad += 1
+
+        # ⚠ 2026-09-21 接线：`tools/check_lang_backticks.py` 由**外部复核方**建出来时
+        #   **自报了「独立脚本 = 零消费者 = 死代码，但 core.py 是别人的文件，故未代为修改」**
+        #   ⇒ 这一行就是把它接上。**没接线的守卫，我们已经栽过很多次。**
+        #   ⚠ 它**只能查 CN↔TW**：S→T 对代码 span 是**恒等变换**，所以那条判据零假阳性。
+        #     拿去查 CN↔EN 会被三个 `.en.md` 链接打成假阳性（工具 docstring 里有实测）。
+        #   ⚠ 顺带：这是 `docs/03 §5.2`「跨语言内容比对到不了 0」的一个**真实例外** ——
+        #     §5.2 说的是**跨语系**；同语系换字形是**可机器验**的。
+        _bt = ROOT / "tools" / "check_lang_backticks.py"
+        if _bt.exists() and {"zh-cn", "zh-tw"} <= set(_langs):
+            try:
+                import importlib.util as _ilu_bt
+                _sp = _ilu_bt.spec_from_file_location("alg_bt", _bt)
+                _m = _ilu_bt.module_from_spec(_sp)
+                _sp.loader.exec_module(_m)
+                _txt = (ROOT / "README.md").read_text(encoding="utf-8")
+                _sec = _m.sections(_txt, README_ANCHOR)
+                _pb = _m.problems("zh-cn", _sec["zh-cn"], "zh-tw", _sec["zh-tw"])
+                print(f"    {'[OK]' if not _pb else '[!!]'} CN↔TW 反引号集合（S→T 对代码 span 是恒等变换）"
+                      + ("" if not _pb else f"：{len(_pb)} 处不一致"))
+                for _x in _pb:
+                    print(f"         · {_x}")
+                if _pb:
+                    bad += 1
+            except Exception as _e:      # 工具不在/坏了 ⇒ 报出来，**不静默当通过**
+                print(f"    [!!] CN↔TW 反引号检查**没能跑**：{_e}")
+                bad += 1
 
     print("[4] L2 已装钩子 与 源文件 是否一致")
     # ⚠ 2026-09-20 加，因为**我当场踩了**：改了 hooks/pre-commit、测试全绿
