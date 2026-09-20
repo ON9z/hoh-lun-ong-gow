@@ -44,7 +44,13 @@ BUILTIN = {
 
 # 已知的**合成样本**：命中里含这些子串 ⇒ 判为喂靶用的假样本，不计入问题。
 # ⚠ 每一条都必须是**一眼就是假的**（RFC 2606 保留域 / 占位符），否则是在给真泄漏开后门。
-SYNTHETIC = ("abcdefghijklmnop", "someone", "example.invalid", "C:\\Users\\x")
+SYNTHETIC = (
+    "abcdefghijklmnop", "someone", "example.invalid", "C:\\Users\\x",
+    # ⚠ 这个必须**精确到假体本身**，不能放宽成 `BEGIN RSA PRIVATE KEY` ——
+    #   那等于对**真私钥**闭眼。样本的可辨识特征是：PEM 头后面**紧跟**
+    #   字面 `\nMIIE\n`（Python 源码里的转义，不是真换行）；真私钥那里是上千字符的 base64。
+    r"PRIVATE KEY-----\nMIIE",
+)
 
 
 def sh(repo: str, *a: str) -> str:
