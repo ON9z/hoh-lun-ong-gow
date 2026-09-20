@@ -24,6 +24,24 @@ and my commit message said nothing about it.**
 2. `git diff --stat <the paths I named>` -- are those changes **mine**
 3. A shared hot file with a concurrent writer => **stage by hunk**, or **wait for them to land**
 
+**⚠️ One more shape: `git add <several paths>` aborts entirely if ANY pathspec does not match -- it stages nothing.**
+
+**Measured (2026-09-21, on a public repository)**:
+```
+git add README.md README.en.md install/core.py tools/x.py
+  fatal: pathspec 'README.en.md' did not match any files   <- it had already been git rm'd
+=> nothing was staged at all
+```
+And I had `git add` and `git commit` on **two separate lines** with **no assertion in between** =>
+**the second line ran anyway, committing only the deletion that was already staged.**
+**=> Result: the English README's file was deleted while its content had not yet been merged into the
+main file => the public repository's landing page briefly fell back to another language.**
+
+**=> Criterion**: **"count the staging area before committing" is not a ritual -- it is the only thing
+that stops this.** If `git diff --cached --name-only | wc -l` does not match what you expect,
+**stop; do not commit.**
+⚠ Especially when a **deletion was already staged by `git rm`** -- do not list it again in `git add`.
+
 ⚠ **One more, related**: `git status` can also read a **stale** state.
 I acted on a reading that said "the teammate's fix is not yet committed" -- it **had been committed**
 (inside **my** commit). **=> Bind a reading to its timestamp; re-read before acting.**
