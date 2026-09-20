@@ -193,6 +193,29 @@ the two languages now agree).
 signal-to-noise ratio cultivates a habit of explaining first and looking later, which is
 irreversible**."
 
+**⚠ But there is one exception, and it narrows this section by a notch -- for a measured reason**
+
+Everything above is about **cross-language** (CN <-> EN): the same sentence in two languages is
+necessarily worded differently, so no anchor can ever reach zero.
+**CN <-> TW is not that case**: converting Simplified to Traditional is an **identity** on
+**code spans / paths / identifiers**
+=> `set(Simplified-section backticks) == set(Traditional-section backticks)` -- **no exceptions,
+no false positives**, measured (25 == 25).
+
+**=> So "content cannot be verified" needs a qualifier:**
+> **Not verifiable across languages; within one language, the code layer IS verifiable.**
+
+**⚠ And this criterion flips if you change the pair by one**: point it at **CN <-> EN** and it
+measures 2 differences (the three `docs/*.md` links versus the three `docs/*.en.md` links) --
+**all of which are legitimate.**
+**=> The same criterion goes from "zero false positives" to "all false positives" by swapping one
+pair of sections.** **Which is another instance of this section's opening line about a criterion's
+applicable range.**
+
+**=> It is now part of `selfcheck`** (the last item in section `[3]`), with four feed cases -- one
+of which targets the most damaging failure: **the machine token `判据：` converted to `判據：`
+=> `startswith` silently stops working.**
+
 **=> So state the boundary honestly:**
 > **A machine can verify "the two shapes match"; it cannot verify "the two say the same thing."**
 > The latter needs a human to read it -- and for a human to read it, **it has to be produced first**
