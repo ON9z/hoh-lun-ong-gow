@@ -6,11 +6,32 @@
 # Failure modes and mechanism-building in agent collaboration
 
 
-Three sets of **field observations** from **long-term engineering collaboration** between one user
-and an AI agent (weeks, thousands of tool calls).
+**In plain terms**: if you let an AI work for a long time -- not one question and one answer, but
+dozens or hundreds of turns, where it edits files, runs commands and leaves side effects behind --
+you will hit problems that **simply do not show up in single-turn evaluation**:
 
-**They are not benchmarks; they are a case series.** They contain no specific project, business,
-data, or identity information.
+- it says "I verified it", **but never actually ran anything**;
+- it adds a check, and that check **can never fail**;
+- it thinks it is done, **having changed half of it**;
+- three things all show green, and that green **proves something about a different file**.
+
+**This repository is a record of those problems, plus a set of practices we worked out in response.**
+
+**Three things it can do for you:**
+
+| What you want | What to use |
+|---|---|
+| **Recognise** these failures | `docs/01`: failure modes classified by capability dimension; each has symptom / minimal reproduction / mitigation |
+| **Prevent** them | `docs/02` + `install/`: 12 guidelines plus an installer that can be installed and removed cleanly, putting them where the AI **reads them every session** |
+| **Make them surface** | `docs/03` + `hooks/`: a commit hook / sentinels / a leak scan, so that "did not do it" and "did it wrong" both become visible |
+
+**When this is useful**: you are building an agent, or you have worked with an AI over a long horizon
+and hit "it said it was done, and the result was wrong".
+**When it is not**: you only ask an AI one or two questions; or what you want is a **model benchmark
+comparison** (there is none here -- see "Boundaries" below).
+
+**No specific project, business, data or identity information appears in this repository** -- every
+example has been abstracted.
 
 ---
 
@@ -169,9 +190,28 @@ See [`LICENSE`](LICENSE).
 # Agent 协作的失效模式与机制建设
 
 
-三份**实践观察**，来自一名使用者与 AI Agent 的**长期工程协作**（数周、上千次工具调用）。
+**简单来说**：如果你让 AI 长时间干活 —— 不是一问一答，而是几十上百轮，它会改文件、跑命令、留下副作用 ——
+你会碰到一些**单轮评测里根本不会出现**的毛病：
 
-**它们不是基准测试，是案例集。** 不含任何具体项目、业务、数据或身份信息。
+- 它说「我验证过了」，**其实没跑**；
+- 它加了一个检查，而那个检查**永远不会报错**；
+- 它以为改完了，**只改了一半**；
+- 三样东西都显示绿灯，而那个绿**证明的是别的文件**。
+
+**这个仓库是这些毛病的记录，以及我们试出来的一套应对办法。**
+
+**它能帮你做的三件事：**
+
+| 你想 | 用什么 |
+|---|---|
+| **认出**这些毛病 | `docs/01`：按能力维度分类的失效模式，每条含现象 / 最小复现 / 缓解 |
+| **防住**它们 | `docs/02` + `install/`：12 条准则，加一个可装可卸的安装器，把准则放到 AI **每次都会读到**的地方 |
+| **让它自己露出来** | `docs/03` + `hooks/`：提交钩子 / 哨兵 / 泄漏扫描，让「没做」和「做错了」都瞒不住 |
+
+**什么时候用得上**：你在做 Agent，或者你已经和 AI 长期协作过，并且遇到过「它说『已经做完了』，结果不对」。
+**什么时候用不上**：你只用 AI 问一两个问题；或者你要的是**模型跑分对比**（这里没有，见下面的「边界」）。
+
+**仓库里不含任何具体项目、业务、数据或身份信息** —— 所有例子都抽象化过。
 
 ---
 
@@ -298,9 +338,28 @@ install\install.cmd status                                     # cmd.exe
 # Agent 協作的失效模式與機制建設
 
 
-三份**實踐觀察**，來自一名使用者與 AI Agent 的**長期工程協作**（數週、上千次工具呼叫）。
+**簡單來說**：如果你讓 AI 長時間幹活 —— 不是一問一答，而是幾十上百輪，它會改檔案、跑指令、留下副作用 ——
+你會碰到一些**單輪評測裡根本不會出現**的毛病：
 
-**它們不是基準測試，是案例集。** 不含任何具體專案、業務、資料或身分資訊。
+- 它說「我驗證過了」，**其實沒跑**；
+- 它加了一個檢查，而那個檢查**永遠不會報錯**；
+- 它以為改完了，**只改了一半**；
+- 三樣東西都顯示綠燈，而那個綠**證明的是別的檔案**。
+
+**這個倉庫是這些毛病的記錄，以及我們試出來的一套應對辦法。**
+
+**它能幫你做的三件事：**
+
+| 你想 | 用什麼 |
+|---|---|
+| **認出**這些毛病 | `docs/01`：按能力維度分類的失效模式，每條含現象 / 最小重現 / 緩解 |
+| **防住**它們 | `docs/02` + `install/`：12 條準則，加一個可裝可卸的安裝器，把準則放到 AI **每次都會讀到**的地方 |
+| **讓它自己露出來** | `docs/03` + `hooks/`：提交鉤子 / 哨兵 / 洩漏掃描，讓「沒做」和「做錯了」都瞞不住 |
+
+**什麼時候用得上**：你在做 Agent，或者你已經和 AI 長期協作過，並且遇到過「它說『已經做完了』，結果不對」。
+**什麼時候用不上**：你只用 AI 問一兩個問題；或者你要的是**模型跑分對比**（這裡沒有，見下面的「邊界」）。
+
+**倉庫裡不含任何具體專案、業務、資料或身分資訊** —— 所有例子都抽象化過。
 
 ---
 
