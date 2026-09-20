@@ -1,6 +1,6 @@
 # Failure modes and mechanism-building in agent collaboration
 
-Two sets of **field observations** from **long-term engineering collaboration** between one user
+Three sets of **field observations** from **long-term engineering collaboration** between one user
 and an AI agent (weeks, thousands of tool calls).
 
 **They are not benchmarks; they are a case series.** They contain no specific project, business,
@@ -12,9 +12,9 @@ data, or identity information.
 
 | File | Contents |
 |---|---|
-| [`docs/01-failure-modes-in-long-horizon-collaboration.md`](docs/01-failure-modes-in-long-horizon-collaboration.md) | **Failure modes classified by capability dimension**: instruction following / long-context retrieval / tool use / code generation and self-modification / reasoning / factuality and metacognition / multi-step and agentic collaboration. Each entry has: symptom · minimal reproduction · mitigation · suggestion for model developers |
-| [`docs/02-mechanisms-for-ai-assisted-engineering.md`](docs/02-mechanisms-for-ai-assisted-engineering.md) | **A set of practices for turning "criticism and lessons" into mechanisms**: the four-gates criterion / automatic guideline injection / a dictionary of error types / a checklist-reconciliation hook / a dispatch template / **criteria and counterexamples for using subagents and teams** / prediction expiry / authorization boundaries / a single source of truth / mechanism self-proof |
-| [`docs/03-portable-mechanism-design.md`](docs/03-portable-mechanism-design.md) | **Making mechanisms work across agents**: the host capability matrix / **the five-layer design L0–L4** / why the **commit hook** is the broadest common ground across agents / capability probing / per-layer self-proof / privacy (the diagnostic bundle carries structure, not content) |
+| [`docs/01-failure-modes-in-long-horizon-collaboration.en.md`](docs/01-failure-modes-in-long-horizon-collaboration.en.md) | **Failure modes classified by capability dimension**: instruction following / long-context retrieval / tool use / code generation and self-modification / reasoning / factuality and metacognition / multi-step and agentic collaboration. Each entry has: symptom · minimal reproduction · mitigation · suggestion for model developers |
+| [`docs/02-mechanisms-for-ai-assisted-engineering.en.md`](docs/02-mechanisms-for-ai-assisted-engineering.en.md) | **A set of practices for turning "criticism and lessons" into mechanisms**: the four-gates criterion / automatic guideline injection / a dictionary of error types / a checklist-reconciliation hook / a dispatch template / **criteria and counterexamples for using subagents and teams** / prediction expiry / authorization boundaries / a single source of truth / mechanism self-proof |
+| [`docs/03-portable-mechanism-design.en.md`](docs/03-portable-mechanism-design.en.md) | **Making mechanisms work across agents**: the host capability matrix / **the five-layer design L0–L4** / why the **commit hook** is the broadest common ground across agents / capability probing / per-layer self-proof / privacy (the diagnostic bundle carries structure, not content) |
 
 ---
 
