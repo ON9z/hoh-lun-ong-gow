@@ -166,14 +166,32 @@ per section (multi-digit numbers + inline code spans):
 First version (raw)          => 6 sections flagged -- **all false positives**
                                 (placeholders get translated: <old commit> for <旧提交>)
 After normalising (treat <...> as placeholders, drop lone single digits)
-                             => 2 sections flagged -- **still all false positives**:
-                                 · `旧名 or 新名` vs `old_name or new_name` (the code span holds prose)
-                                 · `head` is backticked in CN and bare in EN (formatting, not content)
+                             => 2 sections flagged. **I judged both to be "false positives" -- and that was wrong:**
+                                 · `旧名 or 新名` vs `old_name or new_name`
+                                   -- **unsolvable across languages** (the code span holds prose;
+                                      no anchor can ever match)
+                                 · CN backticks `head`, EN leaves head **bare**
+                                   -- **this one was real, not noise.**
 ```
 
-**=> It never reaches zero.** And an alert that has to be **explained away every time** teaches
-people to ignore it -- which is worse than no guard (same stance as §5: a gate that never fires
-buys attention).
+**⚠️ Why I got the second one wrong is worth stating on its own**: I saw that "the word head does
+appear in the English too", concluded it was a formatting difference, and explained the alert away.
+**But the backticks themselves carry meaning: they mark "this is a literal identifier."**
+**Dropping them means the translation lost semantics** -- since fixed (backticks restored in EN;
+the two languages now agree).
+
+**=> So the real conclusion of this section is harder than "content cannot be verified":**
+
+> **A detector that is wrong most of the time will also make you dismiss the one time it is right.**
+>
+> **And that is exactly what I did -- in the same document, immediately below the sentence
+> I had just written about "an alert that gets explained away trains people to ignore it."**
+
+**=> It still never reaches zero** (one unsolvable cross-language case remains), so the decision
+**not** to turn this into a guard stands. **But the reason has to be stated correctly**: not
+"everything it reports is noise" (false), but "**it is right one time in two -- and that
+signal-to-noise ratio cultivates a habit of explaining first and looking later, which is
+irreversible**."
 
 **=> So state the boundary honestly:**
 > **A machine can verify "the two shapes match"; it cannot verify "the two say the same thing."**
