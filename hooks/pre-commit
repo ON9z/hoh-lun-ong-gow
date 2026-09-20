@@ -138,6 +138,12 @@ if [ -f "$SELFCHECK" ]; then
   elif ! sc_out=$("$SCPY" -X utf8 "$SELFCHECK" selfcheck 2>&1); then
     printf '%s\n' "$sc_out" | grep -E '\[!!\]' | head -8 | sed 's/^/      /'
     report "repo self-check FAILED -- run: $SCPY install/core.py selfcheck"
+  else
+    # ⚠ 通过时**也要打一行**（docs/03 §5.1）。这不是形式主义：
+    #   静默的成功与"这个分支根本没跑到"在输出上**完全一样**，
+    #   而这两者的处置相反。**而且那句话是我在同一天写进 docs/03 的** ——
+    #   写完自己的钩子就没照做，所以这行同时是文档和代码的对齐。
+    echo "  [ok] repo self-check: passed"
   fi
 fi
 

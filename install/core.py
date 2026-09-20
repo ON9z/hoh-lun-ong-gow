@@ -703,6 +703,35 @@ def cmd_selfcheck(a) -> int:
         print(f"         · {p}")
     bad += len(_real)
 
+    print("[4] L2 已装钩子 与 源文件 是否一致")
+    # ⚠ 2026-09-20 加，因为**我当场踩了**：改了 hooks/pre-commit、测试全绿
+    #   （喂靶测的是**源文件**），但 `.git/hooks/pre-commit` 还是**旧副本** ⇒
+    #   新加的那行「成功也留痕」**在现场一次都没跑过**。这又是准则 09（接线 ≠ 生效）。
+    #   ⚠ 而且 `report` **早就会报这一条**（`hook matches shipped source: False`）——
+    #     **问题是 report 要人主动去跑**。⇒ 搬进 selfcheck，让它每次提交都查。
+    #     判据：**「机制存在」不等于「机制会跑到」**，这一条本身就是它自己的例证。
+    _src = ROOT / "hooks" / "pre-commit"
+    _inst = ROOT / ".git" / "hooks" / "pre-commit"
+    if not (_src.exists() and _inst.exists()):
+        print(f"    [--] 跳过（源存在={_src.exists()}，已装副本存在={_inst.exists()}）")
+    else:
+        def _norm(p: Path) -> bytes:
+            return p.read_bytes().replace(b"\r\n", b"\n")
+        if _norm(_src) == _norm(_inst):
+            print("    [OK] 已装钩子与 hooks/pre-commit 逐字节一致")
+        else:
+            print("    [!!] **已装钩子与源不一致** —— 你改了 hooks/ 但没重新安装，"
+                  "新逻辑在现场从未跑过")
+            # ⚠ 修复命令**故意不写 `install --apply`**：那会同时写用户的 agent 配置
+            #   （`~/.claude/CLAUDE.md` 之类），**改用户配置属于要人点头的一类**。
+            #   这里只需要换一个文件，就给最小动作。
+            print("         ⇒ 修（只换钩子，不动任何配置）：")
+            print("             cp hooks/pre-commit .git/hooks/pre-commit && "
+                  "chmod +x .git/hooks/pre-commit")
+            print("           （或 `install/core.py install --apply`，"
+                  "但它会**同时改写你的 agent 配置**）")
+            bad += 1
+
     print(f"\n结果：{'[OK] 全部通过' if bad == 0 else f'[!!] {bad} 项有问题'}")
     return 0 if bad == 0 else 1
 

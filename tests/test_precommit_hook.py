@@ -83,7 +83,12 @@ PASS_CASES = [
     ("成对的标记块", {"a.md": "# t\n<!-- agent-lessons:BEGIN v1.0.0 -->\nx\n<!-- agent-lessons:END -->\n"}),
     ("文档里谈论凭据（有 allow）", {"a.md": "例如 `api_key = \"...\"` 长这样 <!-- agent-lessons:allow -->\n"}),
     # ⚠ 双向夹逼的另一边（见 BLOCK_CASES 里那句注释）。
-    ("仓库自检通过 ⇒ 放行", {"install/core.py": "import sys\nsys.exit(0)\n", "a.txt": "x\n"}),
+    # ⚠ 第三/四项 = 运行时输出里**不该有** / **必须有** 的串。
+    #   「必须有」这一项是补的：只查 rc 时，自检通过但**一个字都不打**
+    #   与「自检分支根本没跑到」**无法区分**（docs/03 §5.1）。
+    ("仓库自检通过 ⇒ 放行且**留痕**",
+     {"install/core.py": "import sys\nsys.exit(0)\n", "a.txt": "x\n"},
+     None, "repo self-check: passed"),
     # ⚠ 能力探测：**绝大多数用户项目没有 install/core.py**，这一支必须**静默跳过**
     #   且不报任何东西 —— 否则就是给每个用户报假阳性，逼他们去用 --no-verify。
     ("无 install/core.py ⇒ 自检静默跳过", {"a.txt": "普通内容\n"}, "self-check"),
@@ -111,11 +116,16 @@ def main() -> int:
             #   打印一行"已跳过"同样 rc=0。**声明必须和断言同形**（准则 08）。
             name, files = case[0], case[1]
             must_not = case[2] if len(case) > 2 else None
+            must_have = case[3] if len(case) > 3 else None
             rc, out = _commit(_fresh_repo(tmp), files)
             ok = rc == 0
             if ok and must_not and must_not in out:
                 ok = False
                 print(f"      ↳ 输出里出现了不该有的 {must_not!r}")
+            if ok and must_have and must_have not in out:
+                ok = False
+                print(f"      ↳ 输出里缺少应有的 {must_have!r}"
+                      "（静默的成功与「分支没跑到」不可区分）")
             bad += 0 if ok else 1
             print(f"  {'[OK]' if ok else '[!!]'} {name}   rc={rc}")
             if not ok and out.strip():
