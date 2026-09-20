@@ -3,3 +3,8 @@ Thumbs.db
 *.tmp
 __pycache__/
 *.pyc
+
+# ⚠ 发布前的私有词表：`tools/leak_scan.py --patterns` 从这里读。
+#   **它绝不能被提交** —— 那会让「扫描器」变成新的泄漏源。
+#   `leak_scan.py` 每次运行都会先自证它在 git 之外。
+.leak-patterns.txt
