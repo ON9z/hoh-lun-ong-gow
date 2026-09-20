@@ -37,6 +37,7 @@ import argparse
 import difflib
 import os
 import re
+import shutil
 import sys
 from pathlib import Path
 
@@ -145,6 +146,77 @@ def resolve_target(agent: str, target: str | None) -> Path | None:
 
 def supported_agents() -> list[str]:
     return ["claude", "codex", "cursor", "generic"]
+
+
+# ────────────────────────────────────────────────────────────── L2：git 提交钩子
+HOOK_SRC_REL = "hooks/pre-commit"
+HOOK_MARK = "agent-lessons pre-commit hook"   # 归属标记：只删/改「带这个标记的」文件
+
+
+def _git_dir(target: Path) -> Path | None:
+    """向上找 `.git`（兼容 `.git` 是文件的情况：worktree / submodule）。"""
+    cur = target.resolve()
+    for d in [cur, *cur.parents]:
+        g = d / ".git"
+        if g.is_dir():
+            return g
+        if g.is_file():                       # worktree: `gitdir: <path>`
+            try:
+                line = g.read_text(encoding="utf-8", errors="replace").strip()
+                if line.startswith("gitdir:"):
+                    p = Path(line.split(":", 1)[1].strip())
+                    return p if p.is_absolute() else (d / p).resolve()
+            except Exception:
+                return None
+    return None
+
+
+def git_hook_install(target: Path, apply: bool) -> int:
+    gd = _git_dir(target)
+    if gd is None:
+        print(f"  [--] git 钩子 (L2)：{target} 不是 git 仓库 ⇒ **这一层装不上**（如实报告，不假装成功）")
+        return 0
+    dst = gd / "hooks" / "pre-commit"
+    src = ROOT / HOOK_SRC_REL
+    if not src.exists():
+        print(f"  [!!] 找不到 {src} ⇒ 跳过")
+        return 1
+    ours = dst.exists() and HOOK_MARK in dst.read_text(encoding="utf-8", errors="replace")
+    if dst.exists() and not ours:
+        # ⚠ **绝不覆盖别人的钩子** —— 那可能是有人的自定义逻辑，覆盖掉是静默破坏。
+        #   本工具替用户做的决定到此为止：报出来，让人自己合并。
+        print(f"  [!!] git 钩子 (L2)：{dst} 已存在且**不是本工具装的** ⇒ **拒绝覆盖**")
+        print("       请自行合并，或先移走它。（本工具不替你做这个决定）")
+        return 1
+    verb = "更新" if ours else "安装"
+    print(f"  [{'OK' if apply else '--'}] git 钩子 (L2)：将{verb} {dst}")
+    if not apply:
+        return 0
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dst)
+    try:
+        os.chmod(dst, 0o755)
+    except Exception:
+        print("       ⚠ 无法设置可执行位（Windows 上通常无妨；若 git 不执行它，见 README）")
+    print(f"  [OK] git 钩子已{verb}")
+    return 0
+
+
+def git_hook_uninstall(target: Path, apply: bool) -> int:
+    gd = _git_dir(target)
+    if gd is None:
+        return 0
+    dst = gd / "hooks" / "pre-commit"
+    if not dst.exists():
+        return 0
+    if HOOK_MARK not in dst.read_text(encoding="utf-8", errors="replace"):
+        print(f"  [--] git 钩子 (L2)：{dst} 不是本工具装的 ⇒ 不动它")
+        return 0
+    print(f"  [{'OK' if apply else '--'}] git 钩子 (L2)：将删除 {dst}")
+    if apply:
+        dst.unlink()
+        print("  [OK] git 钩子已删除")
+    return 0
 
 
 # ────────────────────────────────────────────────────────────── 块操作（纯函数，可测）
@@ -256,13 +328,23 @@ def cmd_install(a) -> int:
         print("-" * 70)
         print(_diff(old, new, str(tgt)))
         print("-" * 70)
+    # ── L2：git 提交钩子（**跨 agent 的兜底层**）──
+    # 它装到 `.git/hooks/`（**本地、不进版本库、可逆**），所以默认就装。
+    rc_hook = 0
+    if not a.no_git_hook:
+        proj = Path(a.target) if a.target else Path.cwd()
+        print("-" * 70)
+        print("L2 git 提交钩子（不依赖宿主，任何 agent 写的代码都要过这道门）：")
+        rc_hook = git_hook_install(proj, a.apply)
     if not a.apply:
         print("（dry-run：未写任何东西。加 --apply 才会写）")
-        return 0
+        return rc_hook
     if changed:
         _write(tgt, new)
-        print("[OK] 已写入。卸载：`core.py uninstall --agent " + a.agent + " --apply`")
-    return 0
+        print(f"[OK] L1 已写入 {tgt}")
+    if rc_hook == 0:
+        print("卸载：`core.py uninstall --agent " + a.agent + " --apply`")
+    return rc_hook
 
 
 def cmd_uninstall(a) -> int:
@@ -277,13 +359,18 @@ def cmd_uninstall(a) -> int:
         print(f"[!!] {e}")
         return 2
     print(f"目标 : {tgt}\n结果 : {'将删除块' if new != old else '未发现块（无事可做）'}")
+    rc_hook = 0
+    if not a.no_git_hook:
+        proj = Path(a.target) if a.target else Path.cwd()
+        print("-" * 70)
+        rc_hook = git_hook_uninstall(proj, a.apply)
     if not a.apply:
         print("（dry-run：未写。加 --apply 才会写）")
-        return 0
+        return rc_hook
     if new != old:
         _write(tgt, new)
         print("[OK] 已卸载（用户原有内容未动）")
-    return 0
+    return rc_hook
 
 
 def cmd_status(a) -> int:
@@ -318,7 +405,8 @@ def cmd_status(a) -> int:
 
 def cmd_sync(a) -> int:
     return cmd_install(argparse.Namespace(agent=a.agent, target=a.target, lang=a.lang,
-                                          apply=a.apply, verbose=a.verbose))
+                                          apply=a.apply, verbose=a.verbose,
+                                          no_git_hook=getattr(a, "no_git_hook", False)))
 
 
 def cmd_selfcheck(a) -> int:
@@ -387,10 +475,14 @@ def main() -> int:
 
     def common(p):
         p.add_argument("--agent", default="claude", choices=supported_agents())
-        p.add_argument("--target", default=None, help="generic/cursor 需要：写入哪个目录")
+        p.add_argument("--target", default=None,
+                       help="装到哪个项目目录（L1 的 AGENTS.md 与 L2 的 git 钩子都以它为根；默认当前目录）")
         p.add_argument("--lang", default="zh", choices=["zh", "en"])
         p.add_argument("--apply", action="store_true", help="真的写（默认 dry-run）")
         p.add_argument("--verbose", action="store_true")
+        p.add_argument("--no-git-hook", action="store_true",
+                       help="不装 L2（git 提交钩子）。默认**装** —— 它是唯一"
+                            "「不依赖宿主、又真的能说不」的一层，也是跨 agent 的兜底")
 
     for name in ("install", "sync", "uninstall"):
         common(sub.add_parser(name))

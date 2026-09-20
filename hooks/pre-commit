@@ -1,0 +1,140 @@
+#!/usr/bin/env sh
+# agent-lessons pre-commit hook  (layer L2 -- the portable one)
+#
+# WHY THIS LAYER: session hooks and project files only *ask*. A commit hook is
+# the only mechanism that (a) does not depend on which agent you use, and
+# (b) can actually say no. Anything that reaches the repository passed through
+# this door, whoever wrote it.
+#
+# ⚠ HONEST SCOPE. Most engineering guidelines are NOT machine-checkable
+#   ("are your assertions two-sided?" cannot be detected from a diff).
+#   A hook that pretended to check them would be a gate that always passes --
+#   which is worse than no gate, because it buys attention.
+#   So this hook BLOCKS only on what is genuinely detectable, and for the rest
+#   it PRINTS A CHECKLIST. It does not pretend.
+#
+# WHAT IT BLOCKS (exit 1)
+#   1. credential-shaped strings in the staged diff
+#   2. absolute home paths (someone else's machine, or yours, on the way out)
+#   3. very large files (generated artifacts, accidentally added data)
+#   4. unmatched agent-lessons block markers
+# WHAT IT PRINTS (exit 0)
+#   the guideline titles, as a last-moment prompt
+#
+# ESCAPE HATCHES (both intentional, both yours to use)
+#   * `git commit --no-verify`                     -- skip everything
+#   * add `agent-lessons:allow` on the offending line  -- skip that line
+#   * AGENT_LESSONS_STRICT=0                       -- print, never block
+#
+# INSTALL (the installer does this for you):
+#   cp hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+set -u
+
+STRICT="${AGENT_LESSONS_STRICT:-1}"
+ALLOW='agent-lessons:allow'
+ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+SIZE_LIMIT_KB="${AGENT_LESSONS_MAX_KB:-5120}"
+
+staged_files() {
+  git diff --cached --name-only --diff-filter=ACM 2>/dev/null
+}
+
+# Staged *added* lines, as `path<TAB>lineno<TAB>text`, minus allow-listed lines.
+staged_added_lines() {
+  git diff --cached -U0 2>/dev/null | awk -v allow="$ALLOW" '
+    /^\+\+\+ / { f=$2; sub(/^b\//,"",f); ln=0; next }
+    /^@@/ {
+      # @@ -a,b +c,d @@  -> c is the new-file start
+      match($0, /\+[0-9]+/); ln = substr($0, RSTART+1, RLENGTH-1) + 0; next
+    }
+    /^\+/ {
+      if (f != "" && f != "/dev/null") {
+        t = substr($0, 2)
+        if (index(t, allow) == 0) print f "\t" ln "\t" t
+      }
+      ln++; next
+    }
+  '
+}
+
+problems=0
+report() { problems=$((problems + 1)); printf '  [!] %s\n' "$1"; }
+
+echo "== agent-lessons pre-commit =="
+
+# ---------------------------------------------------------------- 1. credentials
+CRED_RE='(sk-[A-Za-z0-9]{16,}|ghp_[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|(api[_-]?key|apikey|secret|password|passwd|token)[[:space:]]*[:=][[:space:]]*["'"'"']?[A-Za-z0-9/+=_-]{12,})'
+hits=$(staged_added_lines | grep -Eic "$CRED_RE" || true)
+if [ "${hits:-0}" -gt 0 ]; then
+  echo "  credential-shaped strings in the staged diff:"
+  staged_added_lines | grep -Ein "$CRED_RE" | head -5 | sed 's/^/      /' | cut -c1-140
+  report "credentials ($hits line(s)) -- a commit message and history are PERMANENT; remove the value, do not just delete the line later."
+fi
+
+# ---------------------------------------------------------------- 2. home paths
+# NOTE: this hook must not match its own patterns, and must allow docs that *talk*
+# about such paths. The allow-comment exists for exactly that.
+HOME_RE='([A-Za-z]:\\Users\\[A-Za-z0-9._-]+|/home/[A-Za-z0-9._-]+/|/Users/[A-Za-z0-9._-]+/)'
+hits=$(staged_added_lines | grep -Eic "$HOME_RE" || true)
+if [ "${hits:-0}" -gt 0 ]; then
+  echo "  absolute home paths in the staged diff:"
+  staged_added_lines | grep -Ein "$HOME_RE" | head -5 | sed 's/^/      /' | cut -c1-140
+  report "absolute home paths ($hits line(s)) -- these identify a machine/account and break on other systems."
+fi
+
+# ---------------------------------------------------------------- 3. big files
+big=$(staged_files | while IFS= read -r f; do
+        [ -f "$f" ] || continue
+        kb=$(( $(wc -c < "$f" 2>/dev/null || echo 0) / 1024 ))
+        [ "$kb" -gt "$SIZE_LIMIT_KB" ] && printf '      %s  (%s KB)\n' "$f" "$kb"
+      done)
+if [ -n "$big" ]; then
+  echo "  files larger than ${SIZE_LIMIT_KB} KB:"; printf '%s\n' "$big"
+  report "large files -- generated artifacts, data, or binaries usually should not be committed."
+fi
+
+# ---------------------------------------------------------------- 4. markers
+bad=""
+for f in $(staged_files); do
+  case "$f" in *.md|*.txt|*.mdc) ;; *) continue ;; esac
+  [ -f "$f" ] || continue
+  b=$(grep -c 'agent-lessons:BEGIN' "$f" 2>/dev/null || echo 0)
+  e=$(grep -c 'agent-lessons:END' "$f" 2>/dev/null || echo 0)
+  [ "$b" != "$e" ] && bad="$bad      $f  (BEGIN=$b END=$e)\n"
+done
+if [ -n "$bad" ]; then
+  echo "  unmatched agent-lessons markers:"; printf '%b' "$bad"
+  report "unmatched block markers -- run: install/core.py status"
+fi
+
+# ---------------------------------------------------------------- checklist
+echo
+echo "  Before you push this out, the guidelines this repo is built on:"
+for t in \
+  "01 measure before changing (which part is the cause?)" \
+  "02 recompute anything you transmit" \
+  "03 take from history, never edit in place" \
+  "04 commit explicit paths only (no bare 'git commit' after add)" \
+  "05 assertions must be two-sided" \
+  "06 ask: under what input is this criterion FALSE?" \
+  "07 negatives need a second path (pipes hide truncation)" \
+  "08 write 'unverified' as unverified" \
+  "09 wired != seen (verify it reaches the consumer)" \
+  "10 mechanisms must fail on a known-bad input" \
+  "11 is this a human's word or an agent's?" \
+  "12 predictions need an expiry date" ; do
+  echo "      - $t"
+done
+echo
+
+if [ "$problems" -gt 0 ]; then
+  if [ "$STRICT" = "1" ]; then
+    echo "== BLOCKED: $problems issue(s) above. =="
+    echo "   fix them, or:  git commit --no-verify   (you own the consequence)"
+    echo "   false positive? add 'agent-lessons:allow' on that line"
+    exit 1
+  fi
+  echo "== $problems issue(s) above (AGENT_LESSONS_STRICT=0 -> not blocking) =="
+fi
+echo "== ok =="
+exit 0
