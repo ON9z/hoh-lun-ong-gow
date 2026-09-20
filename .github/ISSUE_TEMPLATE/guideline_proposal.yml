@@ -1,0 +1,41 @@
+name: Guideline proposal
+description: Propose a new guideline, or a change to an existing one.
+labels: ["guideline"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Guidelines live in `guidelines/*.md` — **one file per guideline**, and the installer
+        derives the injected block from them at runtime. So the useful shape of a proposal is a
+        *file*, not prose.
+
+        The bar for a guideline is deliberately high: **it must carry a criterion** (a line
+        starting with `判据：` / `Criterion:`), and that criterion must be
+        **judgeable by a human or a machine at the moment of work** — not a virtue.
+  - type: textarea
+    id: incident
+    attributes:
+      label: The real incident behind it
+      description: |
+        What actually went wrong? A guideline without a real incident tends to be a mood,
+        not a rule. "Be careful" does not pass; "I lost X because I did Y" does.
+    validations:
+      required: true
+  - type: textarea
+    id: criterion
+    attributes:
+      label: The criterion
+      description: |
+        One sentence, phrased as a check someone can run *while working*:
+        "Before I do X, have I checked Y?" — not "I should be rigorous".
+    validations:
+      required: true
+  - type: textarea
+    id: false-negative
+    attributes:
+      label: When would this criterion be wrong?
+      description: |
+        Under what input is the criterion vacuous, or does it fire when it should not?
+        A criterion that can never be false is not a criterion.
+    validations:
+      required: false

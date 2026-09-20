@@ -1,0 +1,43 @@
+name: Bug report
+description: Something in the installer, the guidelines, or the hook does not work as documented.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing. **Two requests before you paste anything:**
+
+        1. Run `python install/core.py report` and paste its output. It is designed to carry
+           **structure only** — versions, which layers are installed, whether the block exists,
+           its length and hash. It contains **no file contents, no environment values, and no
+           username or hostname** (paths have the home directory replaced by `~`).
+        2. **Do not paste your agent config files.** They may contain content that is not yours
+           to share.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: The exact commands you ran. If it is about the hook, give the file/line that should have been blocked or allowed.
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Output of `install/core.py report`
+      render: text
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: agent-lessons version
+      placeholder: "e.g. 1.0.0"
+    validations:
+      required: true

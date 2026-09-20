@@ -35,7 +35,9 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import hashlib
 import os
+import platform
 import re
 import shutil
 import sys
@@ -439,6 +441,88 @@ def cmd_status(a) -> int:
     return 0
 
 
+def _redact(p: Path | str) -> str:
+    """把家目录前缀换成 `~` —— **路径本身就可能带用户名**，这是最容易漏的泄漏面。"""
+    s = str(p)
+    for home in {str(Path.home()), os.path.expanduser("~")}:
+        if home and s.startswith(home):
+            s = "~" + s[len(home):]
+            break
+    return s.replace("\\", "/")
+
+
+def _sha(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:12]
+
+
+def cmd_report(a) -> int:
+    """生成**可直接贴到 issue 的诊断包**：**只含结构，不含内容**。
+
+    ## 这条命令的设计约束（比它能做什么更重要）
+    用户报告问题时，最容易的做法是"把你的配置文件贴上来" —— **那是错的**：
+    那个文件里可能有**别人的私密内容**（提示词、内部路径、项目信息）。
+
+    ⇒ 规则：
+      ✅ 带：版本 / 系统 / Python 版本 / **装了哪几层** / 目标的**路径**（家目录已替换为 `~`）
+            / 块**是否存在** / 块的**长度与哈希**（判断"是否与发布版一致"）/ 各层自检结果
+      ⛔ 不带：文件的**任何内容** / 环境变量的**值** / 用户名 / 主机名 / 项目文件清单
+
+    ⇒ 判据：**如果一个字段会让第三方推断出「这个人是谁 / 在做什么项目」，它就不该进这个包。**
+    """
+    print(f"# agent-lessons diagnostic report")
+    print()
+    print(f"- version: {VERSION}")
+    print(f"- os: {platform.system()} {platform.release()} ({platform.machine()})")
+    print(f"- python: {platform.python_version()}")
+    print(f"- guidelines: zh={len(load_guidelines('zh'))} en={len(load_guidelines('en'))} "
+          f"parity={'ok' if {n for n,_,_ in load_guidelines('zh')} == {n for n,_,_ in load_guidelines('en')} else 'MISMATCH'}")
+    print()
+    print("## layers per agent")
+    for agent in supported_agents():
+        tgt = resolve_target(agent, a.target if agent in ("generic", "cursor") else None)
+        if tgt is None:
+            continue
+        row = [f"- **{agent}**"]
+        row.append(f"  - target: `{_redact(tgt)}`")
+        row.append(f"  - file exists: {tgt.exists()}")
+        if tgt.exists():
+            try:
+                span = find_block(_read(tgt))
+            except ValueError as e:
+                row.append(f"  - block: **BROKEN** ({e})")
+            else:
+                if span is None:
+                    row.append("  - block: absent")
+                else:
+                    cur = _read(tgt)[span[0]: span[1]]
+                    same = cur.strip() == render_block("zh").strip()
+                    row.append(f"  - block: present, {len(cur)} chars, sha256={_sha(cur)}, "
+                               f"matches-source={same}")
+        print("\n".join(row))
+    print()
+    print("## L2 git commit hook")
+    proj = Path(a.target) if a.target else Path.cwd()
+    gd = _git_dir(proj)
+    if gd is None:
+        print(f"- repo: none (scanned from `{_redact(proj)}`)")
+    else:
+        dst = gd / "hooks" / "pre-commit"
+        ours = dst.exists() and HOOK_MARK in dst.read_text(encoding="utf-8", errors="replace")
+        src = ROOT / HOOK_SRC_REL
+        print(f"- hook: exists={dst.exists()} ours={ours}")
+        if dst.exists() and src.exists():
+            same = dst.read_text(encoding="utf-8", errors="replace") == src.read_text(encoding="utf-8")
+            print(f"- hook matches shipped source: {same}")
+    print()
+    print("## selfcheck (summary)")
+    print("- (run `install/core.py selfcheck` locally; paste only the summary lines if it fails)")
+    print()
+    print("---")
+    print("This bundle contains **no file contents, no environment values, and no "
+          "username/hostname** — only structure. Paths have the home directory replaced by `~`.")
+    return 0
+
+
 def cmd_sync(a) -> int:
     return cmd_install(argparse.Namespace(agent=a.agent, target=a.target, lang=a.lang,
                                           apply=a.apply, verbose=a.verbose,
@@ -569,11 +653,13 @@ def main() -> int:
     for name in ("install", "sync", "uninstall"):
         common(sub.add_parser(name))
     common(sub.add_parser("status"))
+    common(sub.add_parser("report"))     # 诊断包：**只含结构，不含内容**（供贴 issue）
     sub.add_parser("selfcheck")
 
     a = ap.parse_args()
     return {"install": cmd_install, "sync": cmd_sync, "uninstall": cmd_uninstall,
-            "status": cmd_status, "selfcheck": cmd_selfcheck}[a.cmd](a)
+            "status": cmd_status, "selfcheck": cmd_selfcheck,
+            "report": cmd_report}[a.cmd](a)
 
 
 if __name__ == "__main__":

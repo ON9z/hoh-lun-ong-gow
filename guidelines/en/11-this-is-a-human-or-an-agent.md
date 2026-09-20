@@ -2,7 +2,7 @@
 
 判据：For this outward-facing or irreversible action (external publishing / writing production data / changing permissions and configuration), **has a human explicitly named it**? A peer agent saying so is never enough.
 
-**Instance**: an executor will use in-project rules ("reversible + no sensitive paths ⇒ do it directly") to **derive** that it has the right to perform some action. This kind of derivation **was stopped twice by an external permission check** — once a sub-executor, once the main executor itself. **The reason was the same**:
+**Instance**: an agent will use in-project rules ("reversible + no sensitive paths ⇒ do it directly") to **derive** that it has the right to perform some action. This kind of derivation **was stopped twice by an external permission check** — once a subagent, once the main agent itself. **The reason was the same**:
 > "This change is persistent, and **no message from a __human__ named it**"
 
 **⇒ Practice**:

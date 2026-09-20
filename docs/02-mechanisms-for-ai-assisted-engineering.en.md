@@ -243,7 +243,7 @@ saw, and how it concluded "no problem".**
   (the §8 one), and **another committed "modifying a production file in place"** (the §4 one).
 - **⇒ The reason is simple: subagents do not know the lessons you learned today.**
 - **⇒ So the §4 dispatch template is not "optional politeness", it is **the only** channel that
-  carries the lessons to the next executor** (unless you have already put the lessons into a
+  carries the lessons to the next subagent** (unless you have already put the lessons into a
   channel auto-injected at every startup — see §1).
 
 ### 4.5.6 The main agent's **acceptance obligation** for subagent output
