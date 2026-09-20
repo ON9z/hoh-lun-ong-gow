@@ -84,6 +84,23 @@ see it.** And **a behavioural rule is precisely what this channel exists for.**
 Anything you want the agent in a session to remember has to land on it;
 the body is for the human reading the document. The two are layers, not duplication.**
 
+**⚠ But this rule **needs a stopping condition**, or it eats itself.**
+
+Stated as "promote everything that deserves it", it is an **unbounded set**: a guideline has exactly
+one criterion line, while "lessons worth the session remembering" is infinite. **Measured: this rule
+was over-applied within minutes of being stated** -- someone proposed promoting **the layering
+explanation itself** one more level up.
+
+**=> The stopping condition:**
+> **The criterion line = behavioural constraints that must fire *while writing code***
+> (if you cannot say *when* it should come to mind, it does not qualify).
+> **The body = explanation, boundaries, examples, and "why".**
+
+**=> By that criterion, this very passage is "explanation" => **it belongs in the body.** **
+**And: branches are finite while corollaries are infinite -- the more a theorem says, the smaller its
+range of applicability.** **=> "How do I use this rule" and "how far does this rule reach" are two
+halves of the same sentence.**
+
 ---
 
 ## 2. Mechanism two: a dictionary of error types — three things for each type
