@@ -1,0 +1,27 @@
+# agent-lessons -- line-ending policy
+#
+# WHY THIS FILE EXISTS: the installer copies `hooks/pre-commit` into the user's
+# `.git/hooks/` and it has to be executable *there*. With `core.autocrlf=true`
+# (the Windows default) git rewrites text files to CRLF on checkout, and a CRLF
+# shebang -- `#!/usr/bin/env sh\r` -- is the classic
+# "bad interpreter: No such file or directory" on POSIX.
+#
+# ⚠ HONEST NOTE (guideline 08): I could NOT reproduce that failure. In Git Bash on
+#   Windows both the CRLF and the LF copy exit 0, run directly as `./hook` and as
+#   `sh hook`. So this file removes an ambiguity; it does not fix a measured bug.
+#   It is here because it costs three lines and, if the failure ever does happen,
+#   it lands on a user instead of on me.
+#
+# ⚠ And the reverse direction matters too: `.cmd` files are read by cmd.exe,
+#   where LF-only line endings can break labels and `goto`. Do not "fix" the
+#   `.cmd` rule to LF -- it is deliberate.
+
+* text=auto
+
+# Machine-executed scripts: force LF, everywhere, regardless of the cloner's config.
+hooks/*        text eol=lf
+install/*.sh   text eol=lf
+*.sh           text eol=lf
+
+# cmd.exe reads these; CRLF is the safe form there.
+*.cmd          text eol=crlf

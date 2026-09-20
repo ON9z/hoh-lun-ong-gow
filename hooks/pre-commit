@@ -107,6 +107,40 @@ if [ -n "$bad" ]; then
   report "unmatched block markers -- run: install/core.py status"
 fi
 
+# ------------------------------------------------- 5. repo self-check (capability-detected)
+# ⚠ WHY DETECTION AND NOT A FLAT CALL (docs/03 §4): this hook is a TEMPLATE that
+#   gets installed into *any* project. Most projects have no install/core.py, and
+#   for them this step must be a SILENT NO-OP. A check that fires where it has no
+#   meaning is a false positive -- and a false positive is worse than no check,
+#   because it teaches people to reach for --no-verify and then it never fires again.
+SELFCHECK="$ROOT/install/core.py"
+if [ -f "$SELFCHECK" ]; then
+  SCPY=""
+  # ⚠ PROBE, DO NOT ASSUME (docs/03 §4) -- and this one is not theoretical:
+  #   on Windows/Git-Bash a bare `python3` is often the **Microsoft Store stub**,
+  #   which opens the Store instead of running. Accepting it here would make this
+  #   hook **block every commit with a bogus "self-check FAILED"** -- the exact
+  #   false-positive failure mode described above.
+  #   ⇒ reuse the installer's probe (install/install.sh), same condition, so the
+  #     two cannot disagree about what "a usable Python" means.
+  #   ⚠ `-X utf8` is kept as a precaution (piped stdout + non-UTF-8 locale could
+  #     raise UnicodeEncodeError on the Chinese output). **Honest note: I could
+  #     not reproduce that failure on this machine -- with or without the flag it
+  #     exits 0 -- so treat it as insurance, not as a measured fix.**
+  for c in python3 python py; do
+    if command -v "$c" >/dev/null 2>&1 &&
+       "$c" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 8) else 1)' >/dev/null 2>&1; then
+      SCPY="$c"; break
+    fi
+  done
+  if [ -z "$SCPY" ]; then
+    echo "  [i] repo self-check skipped: no usable Python 3.8+ on PATH"
+  elif ! sc_out=$("$SCPY" -X utf8 "$SELFCHECK" selfcheck 2>&1); then
+    printf '%s\n' "$sc_out" | grep -E '\[!!\]' | head -8 | sed 's/^/      /'
+    report "repo self-check FAILED -- run: $SCPY install/core.py selfcheck"
+  fi
+fi
+
 # ---------------------------------------------------------------- checklist
 echo
 echo "  Before you push this out, the guidelines this repo is built on:"

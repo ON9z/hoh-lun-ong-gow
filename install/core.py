@@ -70,6 +70,50 @@ for _s in ("stdout", "stderr"):
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 GUIDELINES = ROOT / "guidelines"
+DOCS = ROOT / "docs"
+
+
+def doc_parity_problems(docs: Path) -> list[str]:
+    """中/英文档的**结构对偶**检查：`XX.md` 与 `XX.en.md` 的 `##`/`###` 数必须相等。
+
+    ⚠ 为什么要有它：`AGENTS.md` 里只写了「改文档要和它的对偶语言版本一起改」——
+      **那是一句话，不是机制。** 2026-09-20 我给 `03` 加了一节 `###`，
+      英文版是**靠我当场记得**才同步的。下次换个 agent、或者我自己隔一天，
+      就会静默漂移：中文有 8 节、英文有 7 节，**而没有任何东西会发现**。
+
+    ⇒ 判据取「**类别**」不取「字面」：比的是标题的层级与数量，
+      不是措辞 —— 两种语言的措辞本来就该不同。
+    """
+    if not docs.is_dir():
+        return [f"docs 目录不存在：{docs}"]
+
+    def shape(p: Path) -> tuple[int, int]:
+        t = p.read_text(encoding="utf-8")
+        return (len(re.findall(r"^## ", t, re.M)),
+                len(re.findall(r"^### ", t, re.M)))
+
+    out: list[str] = []
+    for f in sorted(docs.glob("*.md")):
+        if f.name.endswith(".en.md"):
+            continue
+        en = docs / (f.name[:-3] + ".en.md")
+        if not en.exists():
+            out.append(f"{f.name}：缺英文对偶（{en.name}）")
+            continue
+        a, b = shape(f), shape(en)
+        if a != b:
+            out.append(f"{f.name} vs {en.name}：结构不一致 "
+                       f"（zh ##/###={a[0]}/{a[1]}，en={b[0]}/{b[1]}）")
+    # ⚠ 反向也查：孤立的 `.en.md`（有英文没中文）同样是漂移，且更容易漏。
+    #   ⚠ 2026-09-20 实测踩坑：`.en.md` 是 **6** 个字符，我第一版写 `[:-7]`（多砍一个）
+    #     ⇒ 真目录 3 个**完全正常**的文件被判成"缺中文对偶"。
+    #     **假阳性守卫比没有守卫更坏**：它会让人去创建本不该存在的文件。
+    #     抓到它的不是 review，是同一段里那句 `喂靶：对偶齐全 ⇒ 不报`。
+    for f in sorted(docs.glob("*.en.md")):
+        zh = docs / (f.name[:-6] + ".md")
+        if not zh.exists():
+            out.append(f"{f.name}：缺中文对偶（{zh.name}）")
+    return out
 
 
 # ────────────────────────────────────────────────────────────── 派生注入块
@@ -631,6 +675,34 @@ def cmd_selfcheck(a) -> int:
         print(f"    {'[OK]' if good else '[!!]'} {name}")
         if not good:
             bad += 1
+    print("[3] 中/英文档结构对偶（docs/）")
+    # ⚠ 准则 10：**新守卫必须拿已知坏样本喂一遍**，证明它真的会红。
+    #   ⇒ 用合成目录喂三种坏形状，而不是只跑真目录然后宣称"通过"。
+    _dtmp = Path(_tf.mkdtemp()) / "docs"; _dtmp.mkdir()
+    (_dtmp / "ok.md").write_text("## A\n### A1\n## B\n", encoding="utf-8")
+    (_dtmp / "ok.en.md").write_text("## A\n### A1\n## B\n", encoding="utf-8")
+    (_dtmp / "drift.md").write_text("## A\n### A1\n## B\n", encoding="utf-8")     # 有 ###
+    (_dtmp / "drift.en.md").write_text("## A\n## B\n", encoding="utf-8")          # 少了 ###
+    (_dtmp / "orphan.en.md").write_text("## A\n", encoding="utf-8")               # 无中文对偶
+    (_dtmp / "nopair.md").write_text("## A\n", encoding="utf-8")                  # 无英文对偶
+    _drift_ok = {
+        "对偶齐全 ⇒ 不报": not [p for p in doc_parity_problems(_dtmp) if "ok" in p],
+        "层级数漂移 ⇒ 报": bool([p for p in doc_parity_problems(_dtmp) if "drift" in p]),
+        "孤立英文 ⇒ 报": bool([p for p in doc_parity_problems(_dtmp) if "orphan" in p]),
+        "缺英文对偶 ⇒ 报": bool([p for p in doc_parity_problems(_dtmp) if "nopair" in p]),
+    }
+    for name, good in _drift_ok.items():
+        print(f"    {'[OK]' if good else '[!!]'} 喂靶：{name}")
+        if not good:
+            bad += 1
+
+    _real = doc_parity_problems(DOCS)
+    print(f"    {'[OK]' if not _real else '[!!]'} 真目录 docs/："
+          + ("中英结构一致" if not _real else f"{len(_real)} 处漂移"))
+    for p in _real:
+        print(f"         · {p}")
+    bad += len(_real)
+
     print(f"\n结果：{'[OK] 全部通过' if bad == 0 else f'[!!] {bad} 项有问题'}")
     return 0 if bad == 0 else 1
 

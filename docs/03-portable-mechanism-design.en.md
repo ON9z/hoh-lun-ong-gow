@@ -98,9 +98,9 @@ Probe order (every step may fail; on failure, degrade — never exit with an err
 
 ## 5. How each layer "proves itself" (**the four gates made concrete**)
 
-Following the four gates of §0 — **① it is called ② it finishes within budget ③ it actually
-appears in the output that is consumed ④ someone will read it** — here is an executable
-verification method, layer by layer:
+Following the four gates from `02-mechanisms-for-ai-assisted-engineering.md` §0 — **① it is
+called ② it finishes within budget ③ it actually appears in the output that is consumed
+④ someone will read it** — here is an executable verification method, layer by layer:
 
 | Layer | How to verify "it really took effect" (not "it was installed") |
 |---|---|
@@ -112,6 +112,39 @@ verification method, layer by layer:
 
 **⇒ One general criterion**: **for each layer ask "what evidence says it is in effect right
 now?" — if you cannot answer, label it "unverified", not "installed".**
+
+### 5.1 ⚠️ A measured case: **"the whole hook silently vanished" is harder to notice than "a section was truncated"**
+
+The table above is about a layer not taking effect. **Here is a sharper piece of evidence**
+(taken from the host's own execution metadata):
+
+```
+Per-run records of one session-level check (20 s timeout):
+  09-19T05:19   durationMs= 7 516   stdout=4579 bytes   all content present ✅
+  09-19T14:18   durationMs=17 637   stdout=4678 bytes   all content present ✅
+  09-20T06:23   durationMs=20 146   exitCode=None  **stdout=0 bytes**   **nothing appeared at all** ❌
+```
+
+**⇒ It was not "the second half got cut off" — the entire hook was killed by its timeout and
+produced no output at all.**
+**⇒ Everything it was supposed to inject** (the pending-items block, three meta-critiques, two
+sentinels) **never reached the context — not one character.**
+**⇒ And `stdout=0` looks exactly like "nothing to report" inside the session.**
+
+**This is the strongest illustration of the criterion in §5**:
+> **"It died / it did not run / it got cut — who would know?" — in that moment, the answer was
+> that nobody would.**
+
+**⇒ Which yields a portable design rule** (this repository now follows it):
+
+> **An injection-type mechanism must emit one line even when it has nothing to report —
+> "check ran, no anomalies."**
+> **"Empty output" has to be distinguishable** — otherwise it simultaneously means
+> "everything is fine" and "I never ran", and those two require **opposite** responses.
+
+**⚠ Alongside it**: this layer **must be able to report when it last succeeded**.
+Reporting only "no anomalies right now" is not enough — that is indistinguishable from
+"the last success was three days ago".
 
 ---
 

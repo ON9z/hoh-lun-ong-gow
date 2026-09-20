@@ -69,6 +69,10 @@ BLOCK_CASES = [
     ("绝对家目录路径：Windows", {"a.txt": "see C:\\Users\\someone\\proj\\f.py\n"}),
     ("绝对家目录路径：POSIX", {"a.txt": "see /home/someone/proj/f.py\n"}),
     ("标记不成对", {"a.md": "# t\n<!-- agent-lessons:BEGIN v1.0.0 -->\nx\n"}),
+    # ⚠ 2026-09-20 加：**接线本身要有测试**。我把仓库自检接进钩子时，
+    #   差点只测「没装 selfcheck 的项目不受影响」——那半边**恒绿**（跳过分支永远不会红）。
+    #   ⇒ 双向夹逼：stub 退 1 **必须拦**，退 0 **必须放**（准则 05）。
+    ("仓库自检失败 ⇒ 拦下", {"install/core.py": "import sys\nsys.exit(1)\n"}),
 ]
 
 # ── 不该被拦下的（must pass）────────────────────────────────────────────────
@@ -78,6 +82,11 @@ PASS_CASES = [
     ("中文内容（编码不该误伤）", {"a.md": "# 标题\n\n正文，含中文与标点。\n"}),
     ("成对的标记块", {"a.md": "# t\n<!-- agent-lessons:BEGIN v1.0.0 -->\nx\n<!-- agent-lessons:END -->\n"}),
     ("文档里谈论凭据（有 allow）", {"a.md": "例如 `api_key = \"...\"` 长这样 <!-- agent-lessons:allow -->\n"}),
+    # ⚠ 双向夹逼的另一边（见 BLOCK_CASES 里那句注释）。
+    ("仓库自检通过 ⇒ 放行", {"install/core.py": "import sys\nsys.exit(0)\n", "a.txt": "x\n"}),
+    # ⚠ 能力探测：**绝大多数用户项目没有 install/core.py**，这一支必须**静默跳过**
+    #   且不报任何东西 —— 否则就是给每个用户报假阳性，逼他们去用 --no-verify。
+    ("无 install/core.py ⇒ 自检静默跳过", {"a.txt": "普通内容\n"}, "self-check"),
 ]
 
 
@@ -96,13 +105,21 @@ def main() -> int:
             print(f"  {'[OK]' if ok else '[!!]'} {name}   rc={rc}")
 
         print("== 不该被拦下 ==")
-        for name, files in PASS_CASES:
+        for case in PASS_CASES:
+            # 可选第三项：`(名字, 文件, 输出里**不该**出现的串)`。
+            # ⚠ 加它是因为我只查 rc 时，「静默跳过」这个**声明本身没被验证** ——
+            #   打印一行"已跳过"同样 rc=0。**声明必须和断言同形**（准则 08）。
+            name, files = case[0], case[1]
+            must_not = case[2] if len(case) > 2 else None
             rc, out = _commit(_fresh_repo(tmp), files)
             ok = rc == 0
+            if ok and must_not and must_not in out:
+                ok = False
+                print(f"      ↳ 输出里出现了不该有的 {must_not!r}")
             bad += 0 if ok else 1
             print(f"  {'[OK]' if ok else '[!!]'} {name}   rc={rc}")
-            if not ok:
-                print("      " + out.strip().splitlines()[-1][:120] if out.strip() else "")
+            if not ok and out.strip():
+                print("      " + out.strip().splitlines()[-1][:120])
 
         print("== 逃生口 ==")
         repo = _fresh_repo(tmp)
