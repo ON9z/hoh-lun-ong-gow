@@ -1,6 +1,6 @@
 # A mechanism must prove itself: feed it a known-bad sample and show that it really goes red
 
-判据：Have I fed this check **a sample known to fail**? Did it really go red? **Paste the output of that run.**
+判据：Have I fed this check **a sample known to fail**? Did it really go red? **Paste the output of that run.** And: **does it also go red when its entry condition does not hold? — "did not run" is not "passed".**
 
 **⇒ Why**: a check that has **never gone red** is indistinguishable from no check at all — and it is worse, because it **buys up attention**.
 
