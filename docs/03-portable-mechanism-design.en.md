@@ -212,6 +212,39 @@ measures 2 differences (the three `docs/*.md` links versus the three `docs/*.en.
 pair of sections.** **Which is another instance of this section's opening line about a criterion's
 applicable range.**
 
+**⚠ And this family of checks is blind, in principle, to a *symmetric* loss -- measured**
+
+**What happened**: while rewriting the opening I deleted a privacy promise **from all three sections
+at once**. **The three-item structural check, the five-item structural check, and the CN<->TW
+backtick-set check were all silent** -- what caught it was **an external reviewer reading the diff**.
+
+**It then proposed a sixth dimension** (`CN <-> TW` paragraph-count parity) to catch that class --
+**but it validated the idea against git history first, and it cannot catch it**:
+```
+the whole time the sentence was missing:  en 39 / cn 39 / tw 39   => equal
+after the fix:                            en 44 / cn 44 / tw 44   => equal
+```
+
+**Why this is necessary**: the deletion was **symmetric** (all three sections lost it together) --
+**and a parity check compares *siblings*, so after a symmetric loss the siblings really are still equal.**
+
+**=> Conclusion**: **"the three sections equal each other" is, in principle, blind to symmetric loss.**
+Not "not implemented yet" -- **it compares siblings in *space*, and after a symmetric loss the
+siblings genuinely remain equal.**
+
+**=> Comparing against a baseline in *time* (the previous commit) does not work either**: this
+legitimate rewrite moved paragraph counts **39 -> 44**
+=> **a diff-based check fires on every editorial rewrite** -- straight back to this section's
+signal-to-noise problem.
+
+**=> So this class is *reader-only*. And this time, a reader is what caught it.** No check found it.
+
+**⚠ But that sentence needs its precondition, or it is only a sigh**:
+> **What a human reads is the `diff`. => "Only a human can check it" must be paired with:
+> *and the diff has to actually be shown to one*.**
+
+**=> This time it worked because of the act of handing someone the diff -- not because of any guard.**
+
 **=> It is now part of `selfcheck`** (the last item in section `[3]`), with four feed cases -- one
 of which targets the most damaging failure: **the machine token `判据：` converted to `判據：`
 => `startswith` silently stops working.**
