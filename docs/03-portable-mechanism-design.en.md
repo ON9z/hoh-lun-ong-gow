@@ -200,18 +200,27 @@ irreversible**."
 
 **⚠ While here, one plausible criterion to reject outright**: "the two sides must have equal
 non-empty line counts per section". **It is simply false** -- measured in this repository
-(**caliber = non-empty lines, @2026-09-21 00:0x**):
+(**caliber = non-empty lines, read at commit `81e08a4`**):
 ```
 01   CN 303 / EN 448    (1.48x)
 02   CN 283 / EN 362    (1.28x)
-03   CN 121 / EN 158    (1.31x)
 ```
 **Chinese and English line counts are simply not equal** (one Chinese paragraph becomes longer in
 English) => that criterion would fire on **every** section.
 
-⚠ **Note the three numbers above are the "non-empty lines" caliber**; a "total lines" caliber gives
-**a different set**. **If the caliber is not written down, two people can both be right and still
-disagree** -- this section's own numbers are the example.
+⚠ **I deliberately leave doc 03's row out** -- it changes every time this section is edited
+(**this section lives inside doc 03**). **Which is trap 2 below**: a number starts going stale the
+moment it is written down.
+
+⚠ **Three traps, and the table above walks into all of them:**
+1. **Caliber**: the numbers are "non-empty lines"; a "total lines" caliber gives **a different set**.
+   **If the caliber is not written down, two people can both be right and still disagree** -- the
+   person verifying this section and I reported two different numbers for the same span because of it.
+2. **Time**: when I first wrote this, doc 03's row read `121/158`; **finishing the section made it
+   `158/206`** -- **because the section is inside doc 03**. => **A number has to be pinned to a
+   version**, or it is already out of date the moment it is written down.
+3. **And it is itself an illustration of this section's thesis**: *a number goes stale on its own
+   after you write it, and **nothing will remind you**.*
 
 ---
 
