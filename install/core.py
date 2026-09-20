@@ -936,8 +936,22 @@ def cmd_selfcheck(a) -> int:
         #     拿去查 CN↔EN 会被三个 `.en.md` 链接打成假阳性（工具 docstring 里有实测）。
         #   ⚠ 顺带：这是 `docs/03 §5.2`「跨语言内容比对到不了 0」的一个**真实例外** ——
         #     §5.2 说的是**跨语系**；同语系换字形是**可机器验**的。
+        #   ⚠ **前置条件不成立也必须红** —— 第一版把 `exists()` 写在 `try` 外面、且没有 `else`：
+        #     工具被删/改名 ⇒ 整块跳过 ⇒ **什么都不打印、计入 0** ⇒ selfcheck 报全绿。
+        #     而**文件不存在**恰恰是"接线断掉"最常见的情形。
+        #     ⇒ 而那段注释当时写的是"工具不在/坏了 ⇒ 报出来，不静默当通过" ——
+        #       **注释在描述一个代码没有的行为**（准则 10 那句"零消费者的检查是死代码，
+        #       且它的注释会持续说谎"的又一个实例）。
+        #     ⚠ 这是同一形状的**第三次**：`if X is not None:` 包住的健康检查、
+        #       上一版守卫的 `if not path.exists(): return {}`、以及这一处。
+        #     外部复核方在 `/tmp` 副本里删掉工具实测出来的，**没有碰真树**。
         _bt = ROOT / "tools" / "check_lang_backticks.py"
-        if _bt.exists() and {"zh-cn", "zh-tw"} <= set(_langs):
+        if not (_bt.exists() and {"zh-cn", "zh-tw"} <= set(_langs)):
+            print("    [!!] CN↔TW 反引号检查**没能跑**："
+                  f"工具存在={_bt.exists()}，语段锚点齐全={ {'zh-cn','zh-tw'} <= set(_langs) }")
+            print("         ⇐ **前置条件不成立就是没跑，不是通过** —— 别把绿读成「已检查」")
+            bad += 1
+        else:
             try:
                 import importlib.util as _ilu_bt
                 _sp = _ilu_bt.spec_from_file_location("alg_bt", _bt)
@@ -952,7 +966,7 @@ def cmd_selfcheck(a) -> int:
                     print(f"         · {_x}")
                 if _pb:
                     bad += 1
-            except Exception as _e:      # 工具不在/坏了 ⇒ 报出来，**不静默当通过**
+            except Exception as _e:      # 文件在、但坏了 ⇒ 同样报出来
                 print(f"    [!!] CN↔TW 反引号检查**没能跑**：{_e}")
                 bad += 1
 
