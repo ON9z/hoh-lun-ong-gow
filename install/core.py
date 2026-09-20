@@ -149,10 +149,16 @@ def render_block(lang: str = "zh") -> str:
     for num, title, crit in items:
         body.append(f"- **[{num}] {title}**")
         if crit:
+            # ⚠ `判据：` **两种语言都不译** —— 它是机器接口（load_guidelines 靠它抽取）。
             body.append(f"  - 判据：{crit}")
         else:
-            body.append("  - ⚠ （该准则缺少「判据：」行 —— 不可执行）")
-    tail = ["", "完整说明见仓库 `docs/`。", END]
+            body.append("  - ⚠ （该准则缺少「判据：」行 —— 不可执行）"
+                        if lang != "en" else
+                        "  - [!!] This guideline has no `判据：` line -- not actionable")
+    # ⚠ 2026-09-20 修：tail 原为**硬编码中文**，两种语言共用 ⇒ 英文块末尾会突然出现一句中文。
+    #   （自测发现：英文块里 13 处中文, 除 `判据：` 外还有这一句。）
+    tail = ["", ("See `docs/` for the full write-up." if lang == "en"
+                 else "完整说明见仓库 `docs/`。"), END]
     return "\n".join(head + body + tail) + "\n"
 
 
