@@ -150,7 +150,7 @@ injury:
 - Commit in the form that **commits only specified paths**; verify the staging area before committing
 - **Assertions must clamp both ways**; one-sided is not allowed
 - **Any negative conclusion of "zero hits / does not exist"** must be re-verified through a path
-  without head
+  without `head`
 - **Unverified must be written as "unverified"**; "cannot determine" must not be written as a conclusion
 - **Where you think a judgment I gave is wrong — say so directly**, with your own measurement
 ```
