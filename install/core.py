@@ -1,0 +1,406 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""agent-lessons 安装器核心 —— **跨 agent / 幂等 / 可逆 / 可运维**。
+
+## 设计要点（每条都对应一条本文档自身主张的机制）
+
+1. **单一事实源 + 派生，禁止手抄**（= 机制一）
+   注入块**不是**写死在这个文件里的常量，而是从 `guidelines/*.md` **运行时派生**的。
+   ⇒ 改一条准则 ⇒ 所有已安装的 agent 下次同步时自动跟着变。
+
+2. **默认只读（dry-run）**，写要显式 `--apply`
+   它要改的是**别人的 agent 配置文件**（可能含用户自己的内容）。
+   ⇒ 先看要写什么，再决定写不写。
+
+3. **带标记的块 + 绝不覆盖用户内容**（= 可逆）
+   写入形如：
+       <!-- agent-lessons:BEGIN v1 -->  ...  <!-- agent-lessons:END -->
+   `--uninstall` 只删这两行之间的内容，**其余一字不动**。
+
+4. **幂等**：重复安装不会产生第二份块；旧版块会被**原地替换**。
+
+5. **可运维**：`status`（装了什么/什么版本/内容是否漂移）、`sync`（重新派生并更新）、
+   `uninstall`、`selfcheck`（安装器自己的自检）。
+
+## 用法
+    python core.py status                 # 看当前装了哪些、是否与 guidelines 一致
+    python core.py install --agent claude # 默认 dry-run，打印将要写入的内容
+    python core.py install --agent claude --apply
+    python core.py install --agent generic --target /path/to/project --apply
+    python core.py sync    --apply        # guidelines 改了之后，把已装的块更新一遍
+    python core.py uninstall --agent claude --apply
+    python core.py selfcheck
+"""
+from __future__ import annotations
+
+import argparse
+import difflib
+import os
+import re
+import sys
+from pathlib import Path
+
+VERSION = "1.0.0"
+# ⚠ 2026-09-20 修：原为 `\s*$`。在 `re.M` 下 `\s` **会吃掉行尾换行** ⇒ 匹配区间越过 `\n`
+#   ⇒ 替换后**少一个换行** ⇒ 第二次安装仍判「有变化」⇒ **不幂等**（每次 sync 都重写文件）。
+#   `selfcheck` 没抓到这个（它当时没有幂等用例）—— 已补。
+#   ⇒ 改用 `[ \t]*$`：只吃行内空白，不吃换行。
+BEGIN_RE = re.compile(r"^[ \t]*<!--\s*agent-lessons:BEGIN[^>]*-->[ \t]*$", re.M)
+END_RE = re.compile(r"^[ \t]*<!--\s*agent-lessons:END\s*-->[ \t]*$", re.M)
+BEGIN = f"<!-- agent-lessons:BEGIN v{VERSION} -->"
+END = "<!-- agent-lessons:END -->"
+
+# ⚠ 2026-09-20 修（真机自测发现）：默认 Windows 控制台是 GBK，而本文件原先在输出里用了
+#   emoji 勾叉（U+2705 / U+274C）⇒ `UnicodeEncodeError: 'gbk' codec can't encode ...`
+#   ⇒ **安装器在绝大多数 Windows 用户那里直接崩**（本项目记忆里早有 "stdout GBK" 这一条）。
+#   修法两件一起：
+#     (a) 这里把 stdout/stderr 强制 UTF-8 且 `errors="replace"`（绝不因编码崩）；
+#     (b) **面向用户的输出改用 ASCII 标记** `[OK]` / `[!!]` —— 即使 reconfigure 失败也不会崩。
+#   ⚠ 注：改这段时我用了全局字符串替换，**把注释里的原文也一起换了**，导致注释一度在说反话
+#     （"用了 [OK] 会崩"）。凡批量替换，**必须回头读一遍被改到的注释**。
+for _s in ("stdout", "stderr"):
+    try:
+        getattr(sys, _s).reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parent
+GUIDELINES = ROOT / "guidelines"
+
+
+# ────────────────────────────────────────────────────────────── 派生注入块
+def load_guidelines() -> list[tuple[str, str, str]]:
+    """从 `guidelines/*.md` 派生 [(编号, 标题, 判据行)]。
+
+    文件约定：首行 `# <标题>`；正文里**第一条以「判据：」开头的行**就是它的判据。
+    **没有判据的文件会被 `selfcheck` 报出来** —— 一条没有可执行判据的"准则"是废话。
+    """
+    out: list[tuple[str, str, str]] = []
+    if not GUIDELINES.is_dir():
+        return out
+    for f in sorted(GUIDELINES.glob("*.md")):
+        text = f.read_text(encoding="utf-8")
+        title = ""
+        for ln in text.splitlines():
+            if ln.startswith("# "):
+                title = ln[2:].strip()
+                break
+        crit = ""
+        for ln in text.splitlines():
+            s = ln.strip().lstrip("-* ").strip()
+            if s.startswith("判据："):
+                crit = s[len("判据："):].strip()
+                break
+        stem = f.stem
+        num = stem.split("-", 1)[0] if "-" in stem else stem
+        out.append((num, title or stem, crit))
+    return out
+
+
+def render_block(lang: str = "zh") -> str:
+    """渲染注入块。**必须由 `load_guidelines()` 派生，不得写死。**"""
+    items = load_guidelines()
+    if lang == "en":
+        head = [
+            BEGIN,
+            f"# Engineering guidelines (agent-lessons v{VERSION})",
+            "",
+            "Derived from `guidelines/*.md`. Do not edit by hand — run `install/core.py sync`.",
+            "",
+        ]
+    else:
+        head = [
+            BEGIN,
+            f"# 工程准则（agent-lessons v{VERSION}）",
+            "",
+            "以下由 `guidelines/*.md` **派生**（请勿手改本块；改准则后跑 `install/core.py sync`）。",
+            "",
+        ]
+    body = []
+    for num, title, crit in items:
+        body.append(f"- **[{num}] {title}**")
+        if crit:
+            body.append(f"  - 判据：{crit}")
+        else:
+            body.append("  - ⚠ （该准则缺少「判据：」行 —— 不可执行）")
+    tail = ["", "完整说明见仓库 `docs/`。", END]
+    return "\n".join(head + body + tail) + "\n"
+
+
+# ────────────────────────────────────────────────────────────── 目标解析
+def resolve_target(agent: str, target: str | None) -> Path | None:
+    """返回要写入的文件路径。`generic` 需要一个显式目录。"""
+    home = Path.home()
+    if agent == "claude":
+        return Path(os.environ.get("CLAUDE_CONFIG_DIR", home / ".claude")) / "CLAUDE.md"
+    if agent == "codex":
+        return Path(os.environ.get("CODEX_HOME", home / ".codex")) / "AGENTS.md"
+    if agent == "cursor":
+        return (Path(target) if target else Path.cwd()) / "AGENTS.md"
+    if agent == "generic":
+        return (Path(target) if target else Path.cwd()) / "AGENTS.md"
+    return None
+
+
+def supported_agents() -> list[str]:
+    return ["claude", "codex", "cursor", "generic"]
+
+
+# ────────────────────────────────────────────────────────────── 块操作（纯函数，可测）
+def find_block(text: str) -> tuple[int, int] | None:
+    """返回 (start, end) 字符区间；没有块 ⇒ None。多处 ⇒ 抛错（防止我们写坏过文件）。"""
+    starts = [m.start() for m in BEGIN_RE.finditer(text)]
+    ends = [m.end() for m in END_RE.finditer(text)]
+    if len(starts) != len(ends):
+        raise ValueError(f"标记不成对：BEGIN×{len(starts)} / END×{len(ends)} —— 拒绝改动，请人工检查")
+    if not starts:
+        return None
+    if len(starts) > 1:
+        raise ValueError(f"发现 {len(starts)} 个块 —— 拒绝改动（本工具只应有一个块）")
+    if ends[0] < starts[0]:
+        raise ValueError("END 出现在 BEGIN 之前 —— 拒绝改动")
+    return starts[0], ends[0]
+
+
+NL_TAG = "nl=1"
+
+
+def apply_block(text: str, block: str) -> str:
+    """插入或**原地替换**块。**不修改用户文件里已有的任何字符。**
+
+    ⚠ 精确可逆的难点（2026-09-20 自测发现）：当用户文件**不以换行结尾**时，
+    为了让块从新的一行开始，必须补一个换行；而这个补的换行与"用户自己的换行"
+    **在块前看起来完全一样** ⇒ 卸载时无法靠局部判断区分。
+    **⇒ 让标记自己携带这个信息**：补过就把 `nl=1` 写进 BEGIN 行，
+    `remove_block` 读它、把那个换行一并删掉 ⇒ **装卸互为精确逆运算**。
+    """
+    span = find_block(text)
+    if span is None:
+        added = bool(text) and not text.endswith("\n")
+        blk = block
+        if added:
+            # 把 nl=1 塞进 BEGIN 行（在 ` -->` 之前）
+            blk = re.sub(r"(<!--\s*agent-lessons:BEGIN[^>]*?)(\s*-->)",
+                         r"\1 " + NL_TAG + r"\2", block, count=1)
+        return text + ("\n" if added else "") + ("\n" if text else "") + blk
+    # ⚠ 替换分支**必须保住已有的 nl=1 标记** —— 否则第二次安装会把标记丢掉：
+    #   标记没了 ⇒ 幂等失败（文本变了），且卸载时无法知道该不该删那个换行。
+    #   （自测发现：这一版之前的替换分支正是这样把标记弄丢的。）
+    keep_nl = NL_TAG in text[span[0]: span[0] + 200]
+    blk = block
+    if keep_nl and NL_TAG not in blk:
+        blk = re.sub(r"(<!--\s*agent-lessons:BEGIN[^>]*?)(\s*-->)",
+                     r"\1 " + NL_TAG + r"\2", block, count=1)
+    return text[: span[0]] + blk.rstrip("\n") + text[span[1]:]
+
+
+def remove_block(text: str) -> str:
+    """只删块本身，**外加安装时插入的那一个分隔空行**（若它确实在）—— 其余一字不动。
+
+    ⚠ 2026-09-20 修：原实现尾部有 `re.sub(r"\\n{3,}", "\\n\\n", out)` ——
+      **它会动用户自己的空行**（用户原有 3 个空行会被压成 2 个）。
+      「卸载后用户内容一字不动」是本工具的承诺 ⇒ 改成**只精确删掉自己加的那一个 `\\n`**。
+    """
+    span = find_block(text)
+    if span is None:
+        return text
+    start, end = span
+    # 块自己的两个换行（分隔空行 + 结尾换行）可以删；用户内容里的换行不动。
+    if start >= 2 and text[start - 1] == "\n" and text[start - 2] == "\n":
+        start -= 1
+    if text[end:end + 1] == "\n":
+        end += 1
+    out = text[:start] + text[end:]
+    # 安装时若给用户原文补过换行（标记里写着 nl=1）⇒ 这里把它删掉 ⇒ 精确还原
+    if NL_TAG in text[span[0]: span[0] + 200] and out.endswith("\n") and not out.endswith("\n\n"):
+        out = out[:-1]
+    return out
+
+
+# ────────────────────────────────────────────────────────────── 命令
+def _read(p: Path) -> str:
+    return p.read_text(encoding="utf-8") if p.exists() else ""
+
+
+def _diff(old: str, new: str, name: str) -> str:
+    d = list(difflib.unified_diff(old.splitlines(True), new.splitlines(True),
+                                 fromfile=f"a/{name}", tofile=f"b/{name}"))
+    return "".join(d) if d else "(无变化)"
+
+
+def _write(p: Path, text: str) -> None:
+    p.parent.mkdir(parents=True, exist_ok=True)
+    tmp = p.with_suffix(p.suffix + ".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    os.replace(tmp, p)
+
+
+def cmd_install(a) -> int:
+    tgt = resolve_target(a.agent, a.target)
+    if tgt is None:
+        print(f"未知 agent：{a.agent}（支持：{', '.join(supported_agents())}）")
+        return 2
+    block = render_block(a.lang)
+    old = _read(tgt)
+    try:
+        new = apply_block(old, block)
+    except ValueError as e:
+        print(f"[!!] {tgt}\n   {e}")
+        return 2
+    changed = new != old
+    print(f"目标 : {tgt}")
+    print(f"内容 : {len(load_guidelines())} 条准则 · 块 {len(block.splitlines())} 行 · "
+          f"{'将改变文件' if changed else '无变化（已是最新）'}")
+    if a.verbose or not a.apply:
+        print("-" * 70)
+        print(_diff(old, new, str(tgt)))
+        print("-" * 70)
+    if not a.apply:
+        print("（dry-run：未写任何东西。加 --apply 才会写）")
+        return 0
+    if changed:
+        _write(tgt, new)
+        print("[OK] 已写入。卸载：`core.py uninstall --agent " + a.agent + " --apply`")
+    return 0
+
+
+def cmd_uninstall(a) -> int:
+    tgt = resolve_target(a.agent, a.target)
+    if tgt is None or not tgt.exists():
+        print(f"目标不存在：{tgt}")
+        return 2
+    old = _read(tgt)
+    try:
+        new = remove_block(old)
+    except ValueError as e:
+        print(f"[!!] {e}")
+        return 2
+    print(f"目标 : {tgt}\n结果 : {'将删除块' if new != old else '未发现块（无事可做）'}")
+    if not a.apply:
+        print("（dry-run：未写。加 --apply 才会写）")
+        return 0
+    if new != old:
+        _write(tgt, new)
+        print("[OK] 已卸载（用户原有内容未动）")
+    return 0
+
+
+def cmd_status(a) -> int:
+    items = load_guidelines()
+    print(f"agent-lessons v{VERSION}")
+    print(f"准则 : {len(items)} 条（来自 {GUIDELINES}）")
+    for num, title, crit in items:
+        flag = "" if crit else "  ⚠ 缺「判据：」行"
+        print(f"       [{num}] {title}{flag}")
+    print("-" * 60)
+    block = render_block("zh")
+    for agent in supported_agents():
+        tgt = resolve_target(agent, a.target if agent in ("generic", "cursor") else None)
+        if tgt is None:
+            continue
+        if not tgt.exists():
+            print(f"  {agent:<9} {tgt}  —— 文件不存在（未安装）")
+            continue
+        try:
+            span = find_block(_read(tgt))
+        except ValueError as e:
+            print(f"  {agent:<9} {tgt}  [!!] {e}")
+            continue
+        if span is None:
+            print(f"  {agent:<9} {tgt}  —— 无块（未安装）")
+            continue
+        cur = _read(tgt)[span[0]: span[1]]
+        same = cur.strip() == block.strip()
+        print(f"  {agent:<9} {tgt}  —— [OK] 已装{'（与 guidelines 一致）' if same else '（⚠ 与 guidelines 不一致，跑 sync）'}")
+    return 0
+
+
+def cmd_sync(a) -> int:
+    return cmd_install(argparse.Namespace(agent=a.agent, target=a.target, lang=a.lang,
+                                          apply=a.apply, verbose=a.verbose))
+
+
+def cmd_selfcheck(a) -> int:
+    """安装器**自检** —— 它是机制的一部分，所以它自己也要被验。"""
+    bad = 0
+    items = load_guidelines()
+    print(f"[1] guidelines：{len(items)} 条")
+    if not items:
+        print("    [!!] 一条都没有 —— 检查目录", GUIDELINES)
+        bad += 1
+    for num, title, crit in items:
+        if not crit:
+            print(f"    [!!] [{num}] {title} —— 缺「判据：」行（不可执行）")
+            bad += 1
+    print("[2] 块操作（纯函数，用合成样本喂靶）")
+    # ⚠ 喂靶的"替换块"**必须是真实的块形状（含标记）** ——
+    #   我第一版传的是字面量 "BLOCK2\n"（不含标记），却断言"正好一个 BEGIN" ⇒ 恒 FAIL。
+    #   **那是测试写错，不是生产错**（生产行为逐项核过：原地替换、用户内容保留）。
+    BLK1 = f"<!-- agent-lessons:BEGIN v0 -->\n旧\n{END}\n"
+    BLK2 = f"<!-- agent-lessons:BEGIN v1 -->\n新\n{END}\n"
+    cases = [
+        ("空文件 → 插入", "", lambda t: apply_block(t, BLK1),
+         lambda r: r.count("agent-lessons:BEGIN") == 1),
+        ("已有块 → 原地替换（不新增第二块）", f"用户内容\n{BLK1}尾\n",
+         lambda t: apply_block(t, BLK2),
+         lambda r: (r.count("agent-lessons:BEGIN") == 1 and "新" in r and "旧" not in r
+                    and "用户内容" in r and "尾" in r)),
+        ("卸载 → 只删块，用户内容保留", f"头\n{BLK1}尾\n",
+         remove_block, lambda r: "旧" not in r and "头" in r and "尾" in r),
+        ("标记不成对 → 必须拒绝", f"头\n{BEGIN}\nX\n",
+         lambda t: find_block(t), lambda r: False),   # 期望抛错
+        # ⚠ 幂等：**这条本该拦住"正则吃掉换行"那个 bug** —— 加它是因为当时没有这条例。
+        ("幂等：同内容二次安装 ⇒ 逐字节不变", f"用户内容\n{BLK1}尾\n",
+         lambda t: apply_block(apply_block(t, BLK2), BLK2),
+         lambda r: r == apply_block(f"用户内容\n{BLK1}尾\n", BLK2)),
+        # ⚠ 边角形态（自测中真的踩过）：
+        #   · **无尾换行**：安装必须补一个换行，而它与"用户自己的换行"在块前**无法区分**
+        #     ⇒ 靠把 `nl=1` 写进 BEGIN 行来记住；替换分支还必须**保住**这个标记。
+        #   · **CRLF**：用户的 `\r\n` 不能被改写。
+        ("边角：原文无尾换行 ⇒ 仍须精确还原", "用户原有内容",
+         lambda t: remove_block(apply_block(apply_block(t, BLK1), BLK1)),
+         lambda r: r == "用户原有内容"),
+        ("边角：CRLF 原文 ⇒ 仍须精确还原", "a\r\nb\r\n",
+         lambda t: remove_block(apply_block(apply_block(t, BLK1), BLK1)),
+         lambda r: r == "a\r\nb\r\n"),
+        ("安装 → 卸载 ⇒ 还原用户原文（不残留分隔空行）", "用户内容\n",
+         lambda t: remove_block(apply_block(t, BLK1)),
+         lambda r: r == "用户内容\n"),
+    ]
+    for name, src, fn, ok in cases:
+        try:
+            res = fn(src)
+            good = ok(res)
+        except ValueError:
+            good = "拒绝" in name
+        print(f"    {'[OK]' if good else '[!!]'} {name}")
+        if not good:
+            bad += 1
+    print(f"\n结果：{'[OK] 全部通过' if bad == 0 else f'[!!] {bad} 项有问题'}")
+    return 0 if bad == 0 else 1
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description="agent-lessons installer")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+
+    def common(p):
+        p.add_argument("--agent", default="claude", choices=supported_agents())
+        p.add_argument("--target", default=None, help="generic/cursor 需要：写入哪个目录")
+        p.add_argument("--lang", default="zh", choices=["zh", "en"])
+        p.add_argument("--apply", action="store_true", help="真的写（默认 dry-run）")
+        p.add_argument("--verbose", action="store_true")
+
+    for name in ("install", "sync", "uninstall"):
+        common(sub.add_parser(name))
+    common(sub.add_parser("status"))
+    sub.add_parser("selfcheck")
+
+    a = ap.parse_args()
+    return {"install": cmd_install, "sync": cmd_sync, "uninstall": cmd_uninstall,
+            "status": cmd_status, "selfcheck": cmd_selfcheck}[a.cmd](a)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
