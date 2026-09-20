@@ -169,12 +169,20 @@ def readme_lang_sections(path: Path) -> dict[str, tuple[int, int, int]]:
         return {}
     t = path.read_text(encoding="utf-8")
     parts = README_ANCHOR.split(t)
-    out: dict[str, tuple[int, int, int]] = {}
+    out: dict[str, tuple[int, int, int, int, int]] = {}
     for i in range(1, len(parts) - 1, 2):
         body = parts[i + 1]
+        # ⚠ 2026-09-21 扩到**五项**：外部复核方指出原来只有 (##, ###, ---)，
+        #   **看不见 `tbl` / `fence`** —— 那两项一直是**手工测的**，不在守卫保护下。
+        #   ⇒ **判据的宽度决定了它能看见什么**：三语段要"结构平行"，
+        #     而表格行数与代码围栏同样是结构。
+        #   ⚠ 它**仍看不见"删掉一段话"**（删段落不改变任何计数）—— 那条由 `docs/03 §5.2` 记着，
+        #     不假装这一改解决了它。
         out[parts[i]] = (len(re.findall(r"^## ", body, re.M)),
                          len(re.findall(r"^### ", body, re.M)),
-                         len(re.findall(r"^---\s*$", body, re.M)))
+                         len(re.findall(r"^---\s*$", body, re.M)),
+                         len(re.findall(r"^\|", body, re.M)),
+                         len(re.findall(r"^```", body, re.M)))
     return out
 
 
@@ -889,6 +897,12 @@ def cmd_selfcheck(a) -> int:
     (_dtmp / "lang_sep.md").write_text(
         '<a id="en"></a>\n## A\n\n---\n\n## B\n\n<a id="cn"></a>\n## 甲\n## 乙\n',
         encoding="utf-8")
+    # ⚠ **专为刚加的第 4/5 维（表格行 / 代码围栏）加的喂靶** ——
+    #   与 `---` 那次同一个理由：**新加的一维没被喂过 = 没被验证过**（准则 10）。
+    (_dtmp / "lang_tbl.md").write_text(
+        '<a id="en"></a>\n## A\n\n| x | y |\n|---|---|\n| 1 | 2 |\n\n'
+        '<a id="cn"></a>\n## 甲\n\n| x | y |\n|---|---|\n',
+        encoding="utf-8")
     _lok = readme_lang_sections(_dtmp / "lang_ok.md")
     _lbad = readme_lang_sections(_dtmp / "lang_bad.md")
     _lsep = readme_lang_sections(_dtmp / "lang_sep.md")
@@ -898,6 +912,8 @@ def cmd_selfcheck(a) -> int:
             len(set(_lbad.values())) > 1,
         "多语段：**只有 `---` 数不同 ⇒ 也要报**（第三项不是摆设）":
             len(set(_lsep.values())) > 1,
+        "多语段：**只有表格行数不同 ⇒ 也要报**（第 4 项不是摆设）":
+            len(set(readme_lang_sections(_dtmp / "lang_tbl.md").values())) > 1,
     }
     for name, good in _lang_cases.items():
         print(f"    {'[OK]' if good else '[!!]'} 喂靶：{name}")
@@ -926,7 +942,7 @@ def cmd_selfcheck(a) -> int:
         print(f"    {'[OK]' if _ok else '[!!]'} README.md 各语段结构："
               + (f"全部相等 {sorted(_vals)[0]}" if _ok else f"**不相等** {dict(_langs)}"))
         if not _ok:
-            print("         ⇐ 三段是同一份文档的三种语言，`##`/`###` 数本就该相等")
+            print("         ⇐ 三段是同一份文档的三种语言，`##`/`###`/`---`/表格行/围栏**五项**本就该相等")
             bad += 1
 
         # ⚠ 2026-09-21 接线：`tools/check_lang_backticks.py` 由**外部复核方**建出来时
