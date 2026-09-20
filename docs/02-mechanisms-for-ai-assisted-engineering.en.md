@@ -64,6 +64,26 @@ a newly built entry point is itself a gate-four risk (nobody will go and use the
 you just built). **Hooking into an existing channel that is certain to run** (session start /
 pre-commit hook / scheduled task) is the reliable path.
 
+**⚠ And this channel has a **very narrow interface** -- write it down, or you will keep stepping on it:**
+
+**The derived listing takes only the opening `判据：` line of each file (plus its continuation
+lines). Body paragraphs do NOT enter the channel.**
+
+**Measured cost (2026-09-21)**: I added a **behavioural rule** ("a guard whose entry condition does
+not hold must also go red") to the **body** of a guideline file, and then announced it had "landed
+in the mechanism".
+**=> It landed in the document, not in the injection channel -- the agent inside a session cannot
+see it.** And **a behavioural rule is precisely what this channel exists for.**
+
+**=> Criterion (three layers, each narrower)**:
+> **Written in a local docstring = not written** (only whoever reads that file sees it).
+> **Written in the body = only whoever reads the document sees it.**
+> **Written into the `判据：` line = the session sees it too.**
+
+**=> So that line is not a "summary" -- it is the single injection interface.
+Anything you want the agent in a session to remember has to land on it;
+the body is for the human reading the document. The two are layers, not duplication.**
+
 ---
 
 ## 2. Mechanism two: a dictionary of error types — three things for each type
