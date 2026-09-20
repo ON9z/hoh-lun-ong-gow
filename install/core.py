@@ -71,16 +71,32 @@ GUIDELINES = ROOT / "guidelines"
 
 
 # ────────────────────────────────────────────────────────────── 派生注入块
-def load_guidelines() -> list[tuple[str, str, str]]:
-    """从 `guidelines/*.md` 派生 [(编号, 标题, 判据行)]。
+def guidelines_dir(lang: str = "zh") -> Path:
+    """语言的准则目录。英文在 `guidelines/en/` 下，文件名与中文版**同名**。
+
+    ⚠ 2026-09-20 修（**由翻译队员发现，不是我自己发现的**）：
+      本函数原先**不存在** —— `load_guidelines()` 直接 `GLOB("*.md")`（**非递归**）。
+      ⇒ 把英文准则放进 `guidelines/en/` 之后，**它们对安装器完全不可见**：
+          磁盘上 24 个文件 · `load_guidelines()` 只回 12 · 英文被读到 **0**
+      ⇒ 而 `selfcheck` **仍然是绿的**（它查的是那 12 个中文文件）。
+      **⇒ 这正是准则 09/10 落在"验证方式"本身：一个"通过"，证明的是别的文件。**
+      ⇒ 凡"新增一个目录"的改动，先问：**谁会读到它？**（读者是不是非递归的？）
+    """
+    return GUIDELINES / "en" if lang == "en" else GUIDELINES
+
+
+def load_guidelines(lang: str = "zh") -> list[tuple[str, str, str]]:
+    """从 `guidelines[/en]/*.md` 派生 [(编号, 标题, 判据行)]。
 
     文件约定：首行 `# <标题>`；正文里**第一条以「判据：」开头的行**就是它的判据。
     **没有判据的文件会被 `selfcheck` 报出来** —— 一条没有可执行判据的"准则"是废话。
+    ⚠ `判据：` 是**机器接口**，两种语言都不译（译了会让所有条目变成"缺判据行"）。
     """
     out: list[tuple[str, str, str]] = []
-    if not GUIDELINES.is_dir():
+    gdir = guidelines_dir(lang)
+    if not gdir.is_dir():
         return out
-    for f in sorted(GUIDELINES.glob("*.md")):
+    for f in sorted(gdir.glob("*.md")):
         text = f.read_text(encoding="utf-8")
         title = ""
         for ln in text.splitlines():
@@ -111,8 +127,8 @@ def load_guidelines() -> list[tuple[str, str, str]]:
 
 
 def render_block(lang: str = "zh") -> str:
-    """渲染注入块。**必须由 `load_guidelines()` 派生，不得写死。**"""
-    items = load_guidelines()
+    """渲染注入块。**必须由 `load_guidelines(lang)` 派生，不得写死。**"""
+    items = load_guidelines(lang)
     if lang == "en":
         head = [
             BEGIN,
@@ -391,6 +407,9 @@ def cmd_status(a) -> int:
     for num, title, crit in items:
         flag = "" if crit else "  ⚠ 缺「判据：」行"
         print(f"       [{num}] {title}{flag}")
+    _en = load_guidelines("en")
+    print(f"       English：{len(_en)} 条（来自 {guidelines_dir('en')}）"
+          if _en else f"       English：**缺失**（{guidelines_dir('en')} 不存在或为空）")
     print("-" * 60)
     block = render_block("zh")
     for agent in supported_agents():
@@ -432,6 +451,34 @@ def cmd_selfcheck(a) -> int:
         if not crit:
             print(f"    [!!] [{num}] {title} —— 缺「判据：」行（不可执行）")
             bad += 1
+
+    # ⚠ 2026-09-20 加（**由翻译队员指出**）：**必须两种语言都查**。
+    #   只查一个目录 ⇒ 另一种语言的准则**重演同一个"零消费者"**：
+    #   一个英文文件写漏了 `判据：`，**没有任何东西会发现**。
+    #   ⚠ 而且再加一条**它没提的**：两种语言的**条目集合必须一致** ——
+    #   否则一边加了准则、另一边没加，**两份块会静默漂移**（准则 09 的另一种形态）。
+    for lang, label in (("zh", "中文"), ("en", "English")):
+        g = guidelines_dir(lang)
+        lst = load_guidelines(lang)
+        miss = [t for _, t, c in lst if not c]
+        n_bad = len(miss)
+        if not g.is_dir():
+            print(f"    [--] {label} 准则目录不存在：{g}（**该语言的 L1 块无从派生**）")
+            continue
+        print(f"    {'[OK]' if (lst and not n_bad) else '[!!]'} {label}：{len(lst)} 条"
+              + (f"，其中 {n_bad} 条缺「判据：」" if n_bad else ""))
+        if not lst:
+            bad += 1
+        bad += n_bad
+    _zh = {n for n, _, _ in load_guidelines("zh")}
+    _en = {n for n, _, _ in load_guidelines("en")}
+    if _zh != _en:
+        print(f"    [!!] **两种语言的条目集合不一致** —— "
+              f"只在中文: {sorted(_zh - _en)}；只在英文: {sorted(_en - _zh)}")
+        print("         ⇒ 两份注入块会**静默漂移**。补上缺的那边，或删掉多的那边。")
+        bad += 1
+    else:
+        print(f"    [OK] 中/英 条目集合一致（{len(_zh)} 条）")
     # ⚠ 判据解析：**多行判据必须完整收下** —— 吃狗粮时发现准则 11 被截成半句。
     #   判据 = 「多行判据的续行被收全」
     import tempfile as _tf
