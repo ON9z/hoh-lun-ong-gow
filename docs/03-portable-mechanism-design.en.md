@@ -142,6 +142,14 @@ sentinels) **never reached the context — not one character.**
 > **"Empty output" has to be distinguishable** — otherwise it simultaneously means
 > "everything is fine" and "I never ran", and those two require **opposite** responses.
 
+**⚠ One more number, and it is the one that matters**: that hook's **timeout is 20 000 ms** --
+**it exceeded its own timeout by 146 milliseconds.** This is not "the budget was set too tight,
+so it fails now and then". It was **hugging the line**: 7 516 -> 17 637 -> a thin crossing,
+**and after that it was never seen again.**
+**⇒ The criterion: if a mechanism's runtime distribution sits close to its own budget, it is not
+"occasionally failing" -- it is already on the way to failing.** And when it fails, the output
+(empty) **looks exactly like everything being fine.**
+
 **⚠ Alongside it**: this layer **must be able to report when it last succeeded**.
 Reporting only "no anomalies right now" is not enough — that is indistinguishable from
 "the last success was three days ago".
