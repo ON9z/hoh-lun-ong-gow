@@ -154,6 +154,47 @@ so it fails now and then". It was **hugging the line**: 7 516 -> 17 637 -> a thi
 Reporting only "no anomalies right now" is not enough — that is indistinguishable from
 "the last success was three days ago".
 
+### 5.2 ⚠️ A boundary: **structure can be machine-verified; "does the content match" cannot**
+
+The *number* of `##`/`###`/`---` can be compared byte-for-byte. **Content cannot** -- and this
+conclusion is **measured, not assumed**:
+
+Across three Chinese/English doc pairs (**32 sections**), comparing language-independent anchors
+per section (multi-digit numbers + inline code spans):
+
+```
+First version (raw)          => 6 sections flagged -- **all false positives**
+                                (placeholders get translated: <old commit> for <旧提交>)
+After normalising (treat <...> as placeholders, drop lone single digits)
+                             => 2 sections flagged -- **still all false positives**:
+                                 · `旧名 or 新名` vs `old_name or new_name` (the code span holds prose)
+                                 · `head` is backticked in CN and bare in EN (formatting, not content)
+```
+
+**=> It never reaches zero.** And an alert that has to be **explained away every time** teaches
+people to ignore it -- which is worse than no guard (same stance as §5: a gate that never fires
+buys attention).
+
+**=> So state the boundary honestly:**
+> **A machine can verify "the two shapes match"; it cannot verify "the two say the same thing."**
+> The latter needs a human to read it -- and for a human to read it, **it has to be produced first**
+> (which is exactly the fourth gate in §5).
+
+**⚠ While here, one plausible criterion to reject outright**: "the two sides must have equal
+non-empty line counts per section". **It is simply false** -- measured in this repository
+(**caliber = non-empty lines, @2026-09-21 00:0x**):
+```
+01   CN 303 / EN 448    (1.48x)
+02   CN 283 / EN 362    (1.28x)
+03   CN 121 / EN 158    (1.31x)
+```
+**Chinese and English line counts are simply not equal** (one Chinese paragraph becomes longer in
+English) => that criterion would fire on **every** section.
+
+⚠ **Note the three numbers above are the "non-empty lines" caliber**; a "total lines" caliber gives
+**a different set**. **If the caliber is not written down, two people can both be right and still
+disagree** -- this section's own numbers are the example.
+
 ---
 
 ## 6. Privacy: the diagnostic bundle carries structure, not content
