@@ -144,7 +144,7 @@ GUIDELINES = ROOT / "guidelines"
 DOCS = ROOT / "docs"
 
 
-def doc_parity_problems(docs: Path) -> list[str]:
+def doc_parity_problems(docs: Path, exclude: set[str] | None = None) -> list[str]:
     """中/英文档的**结构对偶**检查：`XX.md` 与 `XX.en.md` 的 `##`/`###` 数必须相等。
 
     ⚠ 为什么要有它：`AGENTS.md` 里只写了「改文档要和它的对偶语言版本一起改」——
@@ -169,8 +169,9 @@ def doc_parity_problems(docs: Path) -> list[str]:
                 len(re.findall(r"^---\s*$", t, re.M)))
 
     out: list[str] = []
+    _skip = exclude or set()
     for f in sorted(docs.glob("*.md")):
-        if f.name.endswith(".en.md"):
+        if f.name.endswith(".en.md") or f.name in _skip:
             continue
         en = docs / (f.name[:-3] + ".en.md")
         if not en.exists():
@@ -848,6 +849,17 @@ def cmd_selfcheck(a) -> int:
     for p in _real:
         print(f"         · {p}")
     bad += len(_real)
+
+    # ⚠ 2026-09-21 扩到**仓库根目录**：`README.md` 也要有 `.en.md` 对偶。
+    #   原来只查 `docs/` —— 而 README 是**别人打开仓库看到的第一屏**，比第五节译砸了贵得多。
+    #   ⚠ 必须排除 `AGENTS.md`：它是安装器**派生**出来的（由 guidelines 生成），
+    #     **不是一篇需要人工维护对偶的文档** —— 不排除就会每次都报「缺 AGENTS.en.md」的假阳性。
+    _root = doc_parity_problems(ROOT, exclude={"AGENTS.md"})
+    print(f"    {'[OK]' if not _root else '[!!]'} 仓库根目录："
+          + ("中英结构一致" if not _root else f"{len(_root)} 处漂移"))
+    for p in _root:
+        print(f"         · {p}")
+    bad += len(_root)
 
     print("[4] L2 已装钩子 与 源文件 是否一致")
     # ⚠ 2026-09-20 加，因为**我当场踩了**：改了 hooks/pre-commit、测试全绿
