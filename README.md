@@ -12,6 +12,7 @@
 |---|---|
 | [`docs/01-failure-modes-in-long-horizon-collaboration.md`](docs/01-failure-modes-in-long-horizon-collaboration.md) | **按能力维度分类的失效模式**：指令遵循 / 长上下文检索 / 工具使用 / 代码生成与自我修改 / 推理 / 事实性与自我评估 / 多步与代理协作。每条含：现象 · 最小复现 · 缓解 · 对模型方的建议 |
 | [`docs/02-mechanisms-for-ai-assisted-engineering.md`](docs/02-mechanisms-for-ai-assisted-engineering.md) | **把"批评教训"变成机制的一套做法**：四道门判据 / 准则自动注入 / 错误类型字典 / 清单对账钩子 / 派工模板 / **子 Agent 与团队的使用判据与反例** / 预测到期 / 授权边界 / 单一事实源 / 机制自证 |
+| [`docs/03-portable-mechanism-design.md`](docs/03-portable-mechanism-design.md) | **让机制跨 Agent 生效**：宿主能力矩阵 / **五层设计 L0–L4** / 为什么**提交钩子**是跨 Agent 的最大公约数 / 能力探测 / 逐层自证 / 隐私（诊断包只含结构不含内容） |
 
 ---
 
@@ -49,6 +50,55 @@
 > 一份任务书只写「必须拿已知坏版本验证你的检查会失败」，**没写"怎么拿"**
 > ⇒ 执行方**原地修改了生产文件**制造坏版本，命令超时被移到后台 ⇒ **还原那一步没跑到**
 > ⇒ 工作区留在**被改坏的状态**且无提示。
+
+---
+
+## 安装（**可执行，不只是文档**）
+
+本仓库带一个安装器，把 12 条工程准则装进你的 Agent 配置，并**幂等、可精确卸载**。
+
+```bash
+sh    install/install.sh    install --agent claude            # 先 dry-run，看它要改什么
+sh    install/install.sh    install --agent claude --apply    # 真的写
+powershell -File install/install.ps1 status                   # Windows
+install\install.cmd status                                     # cmd.exe
+```
+`--agent` 支持 `claude` / `codex` / `cursor` / `generic`（后者只需给一个目录）。
+
+**⇒ 装完先跑 `install/core.py selfcheck`** —— 安装器**自己也要被验**，它会告诉你每一层装没装上。
+`install/core.py report` 生成**只含结构、不含内容**的诊断包，用于贴 issue。
+
+### 三条你一开始就要做的决定
+
+| 决定 | 怎么定 |
+|---|---|
+| **agent teams 策略** | `--teams=always`（需要就自己开分身）/ **`ask`（默认：每次先问你）** / `never`（不开）。**不给则沿用上次的选择**，升级不会把你的设置重置。 |
+| **装哪几层** | 安装器**探测**你的宿主支持到第几层（见 `docs/03`），**只装能装的，并如实报告哪层没装上**。 |
+| **提交钩子** | 默认装（它只写进 `.git/hooks/`，本地、可逆）。它是**唯一不依赖宿主、又能真的说"不"**的一层。 |
+
+## 前置与**不依赖**
+
+**前置只有一条：`git`**（用于 L2 提交钩子）。Python 3.8+ 仅安装器需要，**全程不联网**。
+
+**明确不依赖**（这一栏比上面那栏重要）：
+
+- ⛔ **不依赖任何特定厂商或模型** —— 这些观察来自长期协作，**换模型/换 Agent 依然适用**；
+- ⛔ **不需要 API key、不需要付费服务、不需要联网**；
+- ⛔ **不依赖 superpowers 之类的技能包** —— 本仓库的机制是**纯文本 + git 钩子**，
+  任何能读项目根文件的 Agent 都用得上（纯 API 调用也有对应层，见 `docs/03` 的能力矩阵）；
+- ⛔ **不要求你把工作流交给它** —— 卸载一条命令，原文精确还原（`selfcheck` 里有幂等与还原用例）。
+
+## 反馈
+
+**问题、反例、以及"你这条判据在我这里不成立"**，都欢迎：
+
+- **Bug / 装不上**：用 [新 issue](../../issues/new?template=bug_report.yml)，
+  **请贴 `install/core.py report` 的输出**（它只含结构与哈希：版本、系统、装了哪层、目标的路径与是否可写、块的长度与哈希）。
+  **⚠ 不要贴配置文件内容** —— 那里面可能有别人的私密内容。
+- **新增/修改一条准则**：用 [准则提案](../../issues/new?template=guideline_proposal.yml)。
+  **准则必须带「判据：」行**（一句可执行、可证伪的话）—— 没有判据的准则会被 `selfcheck` 标为不可执行。
+- **发布前自检**：`python tools/leak_scan.py` —— 它扫**工作区 + 全历史提交 + 提交信息**，
+  三类介质。**「工作区干净」≠「仓库干净」。**
 
 ---
 

@@ -53,6 +53,47 @@ END_RE = re.compile(r"^[ \t]*<!--\s*agent-lessons:END\s*-->[ \t]*$", re.M)
 BEGIN = f"<!-- agent-lessons:BEGIN v{VERSION} -->"
 END = "<!-- agent-lessons:END -->"
 
+# ── agent teams 策略：**三值，安装时由用户定** ─────────────────────────────
+# ⚠ 2026-09-21 加。要求：**一开始就决定**「默认打开 / 每次询问 / 永不打开」，
+#   而不是让 agent 每次自己猜 —— 「猜」正是本仓库记的那些事故的温床。
+# ⚠ 为什么让 **BEGIN 标记行**携带它，而不是另建一个配置文件：
+#   ① `nl=1` 已经用同一手法把状态写在标记行上了（见 `apply_block` 的注释），有先例；
+#   ② 另建文件 = 多一个要 gitignore、要迁移、要向用户解释的东西
+#      —— 本项目对「基建过剩」有实伤记录，能不加就不加；
+#   ③ `BEGIN_RE` 本来就是 `[^>]*`，多一个属性不影响解析。
+# ⚠ 而 `BEGIN` 常量**保持原样、不参数化** —— selfcheck 的喂靶直接引用它（`f"头\n{BEGIN}\nX\n"`），
+#   改它会连带改坏测试。**这是「改之前先 grep 三种位置」的实例。**
+TEAMS_POLICIES = ("always", "ask", "never")
+TEAMS_DEFAULT = "ask"
+
+
+def begin_line(teams: str = TEAMS_DEFAULT) -> str:
+    return f"<!-- agent-lessons:BEGIN v{VERSION} teams={teams} -->"
+
+
+def teams_of(text: str) -> str:
+    """从**已存在的** BEGIN 行读回策略；读不到或非法 ⇒ 取默认。
+
+    ⚠ 为什么不报错：用户的块可能是更早版本装的（那时没有 teams 属性）。
+       **升级路径必须无损** —— 读到就沿用，读不到就取默认，绝不让升级失败。
+    """
+    m = re.search(r"agent-lessons:BEGIN[^>]*?\bteams=(\w+)", text)
+    return m.group(1) if m and m.group(1) in TEAMS_POLICIES else TEAMS_DEFAULT
+
+
+def teams_line(teams: str, lang: str = "zh") -> str:
+    if lang == "en":
+        body = {"always": "spawn subagents/teammates freely when it helps",
+                "ask": "**ask the user first** before spawning subagents/teammates",
+                "never": "do not spawn subagents/teammates"}[teams]
+        return (f"- **[teams] agent teams: {teams}** -- {body}. "
+                f"(Change with `--teams=...`.)")
+    body = {"always": "需要并行时**直接开**分身/队员",
+            "ask": "需要并行时**先问用户**再开分身/队员",
+            "never": "**不开**分身/队员，全部自己做"}[teams]
+    return f"- **[teams] agent teams：{teams}** —— {body}。（改：`--teams=...` 重装）"
+
+
 # ⚠ 2026-09-20 修（真机自测发现）：默认 Windows 控制台是 GBK，而本文件原先在输出里用了
 #   emoji 勾叉（U+2705 / U+274C）⇒ `UnicodeEncodeError: 'gbk' codec can't encode ...`
 #   ⇒ **安装器在绝大多数 Windows 用户那里直接崩**（本项目记忆里早有 "stdout GBK" 这一条）。
@@ -178,12 +219,14 @@ def load_guidelines(lang: str = "zh") -> list[tuple[str, str, str]]:
     return out
 
 
-def render_block(lang: str = "zh") -> str:
+def render_block(lang: str = "zh", teams: str = TEAMS_DEFAULT) -> str:
     """渲染注入块。**必须由 `load_guidelines(lang)` 派生，不得写死。**"""
+    if teams not in TEAMS_POLICIES:
+        teams = TEAMS_DEFAULT
     items = load_guidelines(lang)
     if lang == "en":
         head = [
-            BEGIN,
+            begin_line(teams),
             f"# Engineering guidelines (agent-lessons v{VERSION})",
             "",
             "Derived from `guidelines/*.md`. Do not edit by hand — run `install/core.py sync`.",
@@ -191,7 +234,7 @@ def render_block(lang: str = "zh") -> str:
         ]
     else:
         head = [
-            BEGIN,
+            begin_line(teams),
             f"# 工程准则（agent-lessons v{VERSION}）",
             "",
             "以下由 `guidelines/*.md` **派生**（请勿手改本块；改准则后跑 `install/core.py sync`）。",
@@ -209,8 +252,9 @@ def render_block(lang: str = "zh") -> str:
                         "  - [!!] This guideline has no `判据：` line -- not actionable")
     # ⚠ 2026-09-20 修：tail 原为**硬编码中文**，两种语言共用 ⇒ 英文块末尾会突然出现一句中文。
     #   （自测发现：英文块里 13 处中文, 除 `判据：` 外还有这一句。）
-    tail = ["", ("See `docs/` for the full write-up." if lang == "en"
-                 else "完整说明见仓库 `docs/`。"), END]
+    tail = ["", teams_line(teams, lang), "",
+            ("See `docs/` for the full write-up." if lang == "en"
+             else "完整说明见仓库 `docs/`。"), END]
     return "\n".join(head + body + tail) + "\n"
 
 
@@ -398,8 +442,12 @@ def cmd_install(a) -> int:
     if tgt is None:
         print(f"未知 agent：{a.agent}（支持：{', '.join(supported_agents())}）")
         return 2
-    block = render_block(a.lang)
+    # ⚠ 顺序要紧：**必须先读旧文件**，才能沿用里面已有的 teams 策略。
+    #   否则「重装但不带 --teams」会把用户上次的选择悄悄重置成默认 ——
+    #   那是「升级路径有损」，与 `teams_of` 的注释是同一条判据。
     old = _read(tgt)
+    _teams = getattr(a, "teams", None) or teams_of(old)
+    block = render_block(a.lang, _teams)
     try:
         new = apply_block(old, block)
     except ValueError as e:
@@ -545,7 +593,10 @@ def cmd_report(a) -> int:
                     row.append("  - block: absent")
                 else:
                     cur = _read(tgt)[span[0]: span[1]]
-                    same = cur.strip() == render_block("zh").strip()
+                    # ⚠ 必须用**块里实际记的策略**去比对。用默认值比 ⇒ 用户选了 `never`
+                    #   而块本身是对的，这里照样报 matches-source=False
+                    #   —— **一个纯由我这次改动引入的假阳性**。
+                    same = cur.strip() == render_block("zh", teams_of(cur)).strip()
                     row.append(f"  - block: present, {len(cur)} chars, sha256={_sha(cur)}, "
                                f"matches-source={same}")
         print("\n".join(row))
@@ -576,6 +627,7 @@ def cmd_report(a) -> int:
 def cmd_sync(a) -> int:
     return cmd_install(argparse.Namespace(agent=a.agent, target=a.target, lang=a.lang,
                                           apply=a.apply, verbose=a.verbose,
+                                          teams=getattr(a, "teams", None),
                                           no_git_hook=getattr(a, "no_git_hook", False)))
 
 
@@ -681,6 +733,23 @@ def cmd_selfcheck(a) -> int:
         print(f"    {'[OK]' if good else '[!!]'} {name}")
         if not good:
             bad += 1
+    print("[2.5] agent teams 策略（三值，且升级无损）")
+    # ⚠ 准则 10：每条都要有一个**已知会失败**的方向，否则恒真。
+    _t_ok = {
+        "三种取值都能往返": all(teams_of(begin_line(t) + "\n") == t for t in TEAMS_POLICIES),
+        "非法取值被拒（不是照抄）": teams_of("<!-- agent-lessons:BEGIN v1 teams=乱写 -->") == TEAMS_DEFAULT,
+        "老块（无 teams 属性）⇒ 取默认（**升级无损**）":
+            teams_of("<!-- agent-lessons:BEGIN v1.0.0 -->") == TEAMS_DEFAULT,
+        "三种取值的块**互不相同**（改策略要真的改内容）":
+            len({render_block("zh", t) for t in TEAMS_POLICIES}) == len(TEAMS_POLICIES),
+        "策略只写进 BEGIN 行**和**正文各一处":
+            all(render_block("zh", t).count(f"teams={t}") == 1 for t in TEAMS_POLICIES),
+    }
+    for name, good in _t_ok.items():
+        print(f"    {'[OK]' if good else '[!!]'} {name}")
+        if not good:
+            bad += 1
+
     print("[3] 中/英文档结构对偶（docs/）")
     # ⚠ 准则 10：**新守卫必须拿已知坏样本喂一遍**，证明它真的会红。
     #   ⇒ 用合成目录喂三种坏形状，而不是只跑真目录然后宣称"通过"。
@@ -756,6 +825,11 @@ def main() -> int:
         p.add_argument("--target", default=None,
                        help="装到哪个项目目录（L1 的 AGENTS.md 与 L2 的 git 钩子都以它为根；默认当前目录）")
         p.add_argument("--lang", default="zh", choices=["zh", "en"])
+        # ⚠ `default=None`（不是 TEAMS_DEFAULT）—— 让「没给」与「给了 ask」**可区分**：
+        #   没给 ⇒ 沿用它已有的选择（升级无损）；给了 ⇒ 就用给的。
+        p.add_argument("--teams", default=None, choices=list(TEAMS_POLICIES),
+                       help="agent teams 策略：always（需要就自己开）/ ask（每次先问你）/ "
+                            "never（不开）。不给则沿用已有设置，首次安装取 ask。")
         p.add_argument("--apply", action="store_true", help="真的写（默认 dry-run）")
         p.add_argument("--verbose", action="store_true")
         p.add_argument("--no-git-hook", action="store_true",
