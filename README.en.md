@@ -1,5 +1,7 @@
 # Failure modes and mechanism-building in agent collaboration
 
+**English · [简体中文](README.md)**
+
 Three sets of **field observations** from **long-term engineering collaboration** between one user
 and an AI agent (weeks, thousands of tool calls).
 
