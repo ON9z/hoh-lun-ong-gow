@@ -137,13 +137,13 @@ injury:
 ```markdown
 ## Three questions to ask yourself before dispatching
 1. Is this work already done? (Check version history first; do not trust the task list's status column)
-2. For "the target input", have I written clearly **how to obtain it**? (see below)
+2. For the "known-bad input", have I written clearly **how to obtain it**? (see below)
 3. When were the line numbers / figures I gave read? (line numbers must come with "when they were read")
 
 ## Must be written into the brief, item by item
 - **Verify the actual state first** (version history); if you find it is already done ⇒ stop
   immediately and report; **do not redo it according to the brief**
-- **How to obtain the target input**: get the "known-bad version" by `fetching a historical
+- **How to obtain the known-bad input**: get the "known-bad version" by `fetching a historical
   version to a temporary path`;
   **never modify any tracked file in place** (otherwise one command timeout turns "proof" into
   "contamination")
@@ -155,7 +155,7 @@ injury:
 - **Where you think a judgment I gave is wrong — say so directly**, with your own measurement
 ```
 
-**⚠️ The most expensive one is "how to obtain the target input"**:
+**⚠️ The most expensive one is "how to obtain the known-bad input"**:
 a brief that said only "you must feed it a known-bad version to prove it fails", **without
 saying "how to obtain it"** ⇒ the subagent manufactured the bad version by modifying a
 production file in place, **the command timed out and was moved to the background** ⇒ **the
@@ -388,7 +388,7 @@ completed; **if there is a database table, query the database; logs only show th
 ```
 ① A newly written check/guard must be **fed a sample that is "known to fail"**, proving that it
    **really does go red**.
-   ⚠ The "bad version" used as the target input must be **obtained from a historical version
+   ⚠ The "bad version" used as the known-bad input must be **obtained from a historical version
    into a temporary path**; do not modify files in place (see §4).
 ② Assertions must guard the **category**, not the **shape** (a regex that scans for a spelling
    ⇒ changing the spelling defeats it).

@@ -445,7 +445,7 @@ is dropped, and the recipient has no reason to doubt it.**
 ```
 - Before starting, verify against <version-control history>; do not read only the task list's
   status column                                                       ← F-7.2
-- How to obtain the target input: `git show <rev>:<path> > <temp path>`;
+- How to obtain the known-bad input: `git show <rev>:<path> > <temp path>`;
   never modify any tracked file in place                              ← F-3.1 (the most expensive one)
 - Commit only in the "specified paths" form; verify the staging area before committing ← F-3.2
 - Do not use characters in the commit message that the shell will interpret (use a quoted
