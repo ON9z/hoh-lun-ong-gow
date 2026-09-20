@@ -87,12 +87,23 @@ def load_guidelines() -> list[tuple[str, str, str]]:
             if ln.startswith("# "):
                 title = ln[2:].strip()
                 break
-        crit = ""
+        # ⚠ 2026-09-20 修（**吃自己的狗粮时发现的**）：原实现只取**第一条**以「判据：」开头的行
+        #   ⇒ **多行判据会被静默截断**，而截断后的块**看起来是完整的** —— 正是本仓库准则 06/07
+        #   反复讲的「静默丢弃 + 自信总数」。
+        #   实例：准则 11 的判据写成两行，装出来的块只有前半句「…（对外发布 / 写生产数据 /
+        #   改权限与配置），」—— 一句没有谓语的句子。
+        #   ⇒ 现在**续行一并收**：判据行之后，直到空行 / 标题 / 列表项 / 表格行为止。
+        crit_lines: list[str] = []
         for ln in text.splitlines():
             s = ln.strip().lstrip("-* ").strip()
-            if s.startswith("判据："):
-                crit = s[len("判据："):].strip()
-                break
+            if not crit_lines and s.startswith("判据："):
+                crit_lines.append(s[len("判据："):].strip())
+                continue
+            if crit_lines:
+                if (not s) or s[0] in "#|>" or s.startswith(("- ", "* ")):
+                    break
+                crit_lines.append(s)
+        crit = " ".join(crit_lines).strip()
         stem = f.stem
         num = stem.split("-", 1)[0] if "-" in stem else stem
         out.append((num, title or stem, crit))
@@ -421,6 +432,24 @@ def cmd_selfcheck(a) -> int:
         if not crit:
             print(f"    [!!] [{num}] {title} —— 缺「判据：」行（不可执行）")
             bad += 1
+    # ⚠ 判据解析：**多行判据必须完整收下** —— 吃狗粮时发现准则 11 被截成半句。
+    #   判据 = 「多行判据的续行被收全」
+    import tempfile as _tf
+    _d = Path(_tf.mkdtemp())
+    _g = _d / "guidelines"; _g.mkdir()
+    (_g / "99-x.md").write_text(
+        "# 多行判据\n\n判据：第一段，\n第二段收尾。\n\n尾注。\n", encoding="utf-8")
+    _save = GUIDELINES
+    globals()["GUIDELINES"] = _g
+    try:
+        _c = load_guidelines()
+        _ok = bool(_c) and _c[0][2] == "第一段， 第二段收尾。"
+    finally:
+        globals()["GUIDELINES"] = _save
+    print(f"    {'[OK]' if _ok else '[!!]'} 多行判据：续行被收全（不得截成半句）")
+    if not _ok:
+        bad += 1
+
     print("[2] 块操作（纯函数，用合成样本喂靶）")
     # ⚠ 喂靶的"替换块"**必须是真实的块形状（含标记）** ——
     #   我第一版传的是字面量 "BLOCK2\n"（不含标记），却断言"正好一个 BEGIN" ⇒ 恒 FAIL。
