@@ -87,10 +87,15 @@ def doc_parity_problems(docs: Path) -> list[str]:
     if not docs.is_dir():
         return [f"docs 目录不存在：{docs}"]
 
-    def shape(p: Path) -> tuple[int, int]:
+    def shape(p: Path) -> tuple[int, int, int]:
         t = p.read_text(encoding="utf-8")
+        # ⚠ 第三项（分隔线）是**补的**，因为第一版只数 ##/### 时**漏掉了真事**：
+        #   我在中文版里留了**连续两条 `---`**，英文版只有一条 ——
+        #   中英不对称，而守卫报"一致"。**判据的宽度决定了它能看见什么。**
+        #   判据取 `^---$`（行首行尾），不会误伤表格分隔行 `|---|---|`。
         return (len(re.findall(r"^## ", t, re.M)),
-                len(re.findall(r"^### ", t, re.M)))
+                len(re.findall(r"^### ", t, re.M)),
+                len(re.findall(r"^---\s*$", t, re.M)))
 
     out: list[str] = []
     for f in sorted(docs.glob("*.md")):
@@ -103,7 +108,8 @@ def doc_parity_problems(docs: Path) -> list[str]:
         a, b = shape(f), shape(en)
         if a != b:
             out.append(f"{f.name} vs {en.name}：结构不一致 "
-                       f"（zh ##/###={a[0]}/{a[1]}，en={b[0]}/{b[1]}）")
+                       f"（zh ##/###/---={a[0]}/{a[1]}/{a[2]}，"
+                       f"en={b[0]}/{b[1]}/{b[2]}）")
     # ⚠ 反向也查：孤立的 `.en.md`（有英文没中文）同样是漂移，且更容易漏。
     #   ⚠ 2026-09-20 实测踩坑：`.en.md` 是 **6** 个字符，我第一版写 `[:-7]`（多砍一个）
     #     ⇒ 真目录 3 个**完全正常**的文件被判成"缺中文对偶"。
@@ -685,8 +691,13 @@ def cmd_selfcheck(a) -> int:
     (_dtmp / "drift.en.md").write_text("## A\n## B\n", encoding="utf-8")          # 少了 ###
     (_dtmp / "orphan.en.md").write_text("## A\n", encoding="utf-8")               # 无中文对偶
     (_dtmp / "nopair.md").write_text("## A\n", encoding="utf-8")                  # 无英文对偶
+    # ⚠ 这一条是**为我自己犯过的错**加的：中文版里留了连续两条 `---`，英文版一条，
+    #   而第一版守卫只数 ##/### ⇒ 报"一致"。**喂靶要覆盖我真正犯过的那个形状。**
+    (_dtmp / "sep.md").write_text("## A\n\n---\n\n---\n\n## B\n", encoding="utf-8")
+    (_dtmp / "sep.en.md").write_text("## A\n\n---\n\n## B\n", encoding="utf-8")
     _drift_ok = {
         "对偶齐全 ⇒ 不报": not [p for p in doc_parity_problems(_dtmp) if "ok" in p],
+        "只有分隔线数不同 ⇒ 报": bool([p for p in doc_parity_problems(_dtmp) if "sep" in p]),
         "层级数漂移 ⇒ 报": bool([p for p in doc_parity_problems(_dtmp) if "drift" in p]),
         "孤立英文 ⇒ 报": bool([p for p in doc_parity_problems(_dtmp) if "orphan" in p]),
         "缺英文对偶 ⇒ 报": bool([p for p in doc_parity_problems(_dtmp) if "nopair" in p]),
