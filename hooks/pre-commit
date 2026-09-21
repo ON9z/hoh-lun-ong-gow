@@ -162,7 +162,9 @@ for t in \
   "09 wired != seen (verify it reaches the consumer)" \
   "10 mechanisms must fail on a known-bad input" \
   "11 is this a human's word or an agent's?" \
-  "12 predictions need an expiry date" ; do
+  "12 predictions need an expiry date" \
+  "13 admission is not cleanup (who removes what already got in?)" \
+  "14 edited is not loaded (is the running copy the new one?)" ; do
   echo "      - $t"
 done
 echo

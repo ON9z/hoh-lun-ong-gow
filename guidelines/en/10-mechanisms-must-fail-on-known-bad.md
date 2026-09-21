@@ -52,3 +52,44 @@ else:                 try: … except: report_red(); bad += 1
 
 **=> What they share**: **writing "did not check" as "check passed"** -- and the two produce
 **identical output**.
+
+---
+
+**⚠️ One more (the shape that is hardest to see in yourself): when you fix a check that is
+"vacuously satisfiable", you very easily build a new check that is just as vacuously satisfiable.**
+
+**Measured**: I judged a certain check to be a "marker gate" (**write one agreed-upon marker and you
+pass**), so I added a new gate **explicitly designed to be un-short-circuitable by that marker** --
+with its criterion written as "the report contains the string `py-spy`".
+**The next round I turned the very ruler I had just used on the old gate onto my own new artifact,
+and it was refuted on the spot:**
+
+```
+PASS  "... I plan to run py-spy tomorrow."   <- merely mentions the tool
+PASS  "... I did not run py-spy."            <- explicitly says it was not run
+PASS  "... py-spy is not installed."         <- an excuse
+```
+**=> A criterion satisfiable by one sentence = no criterion. I fixed one marker gate and built another.**
+
+**=> Practice (two moves, both required)**:
+
+① **Turn the ruler you just used on someone else onto the thing you just wrote.** Same question:
+   "**under what input would this be false?**" If you cannot answer ⇒ it is always true.
+② **Write the criterion against what real evidence actually looks like, not against what you guessed.**
+   **Run the tool for real first**, look at its **actual output format**, and only then decide the criterion.
+   In this case the real output is
+
+   ```
+   Thread 13236 (idle): "MainThread"
+       serve_forever (socketserver.py:233)
+       run_server (src\web_server.py:2884)      <- frame = funcname (path:LINE)
+   ```
+
+   ⇒ Real evidence **necessarily contains a `path:LINE` frame**; "mentions the tool name" does not.
+   ⇒ The criterion becomes "**the tool name AND at least one `path:LINE` frame**" --
+   **no single sentence gets past it any more.**
+   ⚠ At the same time, **state in the comment that it can still be bypassed** (paste an unrelated
+   `path:LINE` to pad it out). **Do not pretend it is stronger than it is.**
+
+**=> In one line**: **the step that tightens a criterion must rest on the *measured shape of real
+evidence*; otherwise you have only moved the gate somewhere else.**

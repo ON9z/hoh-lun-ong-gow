@@ -1,0 +1,90 @@
+# Changelog
+
+All notable changes to this repository are recorded here.
+Format follows [Keep a Changelog](https://keepachangelog.com/); the project uses `MAJOR.MINOR.PATCH`
+with the single source of truth being `install/core.py: VERSION`.
+
+---
+
+## [1.1.0] — 2026-09-21
+
+**Theme: two failure modes that both present as "the mechanism looks like it is working".**
+Both entries come from a single day of real work; both were expensive precisely because
+nothing ever went red.
+
+### Added
+
+- **Guideline 13 — 准入 ≠ 清理 (admission is not cleanup)** · [`guidelines/13-admission-is-not-cleanup.md`](guidelines/13-admission-is-not-cleanup.md)
+  A guard of the "single instance / dedupe / cap" kind only ever answers *"should I let this one in
+  right now?"*. It can stop **new** arrivals but has **no authority over the ones already inside** —
+  so its failure mode is not "it missed one", it is **monotone accumulation**, and it looks healthy
+  the entire time.
+  Measured: a scheduled task launched a "single instance" supervisor every 5 minutes; the mutex was
+  **heartbeat freshness** (`<180s` ⇒ exit). The moment the incumbent **stalled >180s**, a second one
+  started — and **once two coexisted, neither ever exited** (each refreshed the heartbeat, so the
+  guard then correctly blocked further ones, but nothing removed the ones already running).
+  4 days → 2 instances; day 5 → 3. And because each instance performed the same side-effecting action,
+  **the coexistence itself became the new fault source**.
+  ⇒ New mandatory question: **"who removes the ones that already got in?"** Use **ownership**, not a
+  **freshness heuristic that misreads "stuck" as "dead"** — that heuristic *manufactures* the very
+  coexistence it is meant to prevent.
+
+- **Guideline 14 — 改了文件 ≠ 行为变了 (edited is not loaded)** · [`guidelines/14-edited-is-not-loaded.md`](guidelines/14-edited-is-not-loaded.md)
+  "I edited the file" is **an action I took**; "behaviour changed" is **a property of the system**.
+  Between them sits **a load moment**, and that moment is not inside my field of view.
+  Measured: I added failure-scene capture to a supervisor script and treated the file's mtime as proof.
+  The script **had already been started 41 seconds earlier** and reads itself **by byte offset**.
+  A failure later that day left **no snapshot** — and my reading was "no snapshot ⇒ no failure happened".
+  Wrong: the log recorded one. The real conclusion was "**the running copy is still the old content**".
+  ⇒ Verify **from the running side** (version / load time / one observable new behaviour), never from
+  the filesystem. And **"I see no output" has two readings** — check which one before choosing.
+
+### Changed
+
+- **Guideline 06** gained a second and third medium of the "allowlist shape" instance:
+  the list need not be **objects** — it can be **wording**. A check whose *rule text* says "any
+  assertion of the 'stuck process' kind must first do X" while its **hand-maintained trigger word
+  list contains none of that family's phrasings** leaves **that entire family unguarded**, while the
+  rule reads as though it were guarded. ⇒ Ask: **do the "rule" and the "trigger condition" come from
+  the same enumeration?**
+- **Guideline 10** gained the shape that is hardest to see in yourself: **when you fix a vacuously
+  satisfiable check, you very easily build another vacuously satisfiable one.** Measured: the
+  replacement criterion was "the report contains the string `py-spy`" — refuted immediately by
+  "I did not run py-spy" and "py-spy is not installed". ⇒ Two required moves: **turn the ruler you
+  just used onto your own artifact**, and **write the criterion against the measured shape of real
+  evidence** (run the tool first, look at its actual output) rather than against a guess.
+- `README.md`: "12 guidelines" → "14 guidelines" in all three languages (EN / 简体 / 繁體).
+- `hooks/pre-commit`: the pre-push checklist now lists all 14 guidelines.
+
+### Fixed
+
+- **`hooks/pre-commit`'s guideline checklist was hand-maintained and silently drifted.** The list
+  cannot be derived (the hook is installed into *consumer* repos, where `guidelines/` does not
+  exist), so it must be carried inside the hook — which means it *will* drift, and since it **only
+  prints**, the drift is indistinguishable from the list being complete.
+  ⇒ Added `hook_checklist_problems()` to the installer, asserted from `selfcheck`:
+  **the numbers in the checklist must equal the numbers in `guidelines/*.md`**, both directions,
+  **with two feed cases** (a list missing one entry must report; a complete list must not).
+  This check caught its own first real drift on the day it was written.
+
+### Verification
+
+- `install/core.py selfcheck` → **exit 0**, all sections green (14 条 × 2 languages; hook checklist
+  in sync; the new feed cases pass; the installed git hook is byte-identical to `hooks/pre-commit`).
+- `install/core.py status` → `claude`, `cursor`, `generic` all **已装（与 guidelines 一致）**.
+- `AGENTS.md` regenerated by `sync` and now reads `BEGIN v1.1.0`.
+
+### Notes
+
+- `install/core.py` contains a **historical** docstring (`guidelines_dir()`) that says
+  "24 files on disk, `load_guidelines()` returns only 12". That sentence records the state at the
+  time of the bug it describes and is **deliberately not updated** — rewriting it would falsify history.
+  Version numbers elsewhere are derived, not duplicated.
+
+---
+
+## [1.0.0] — 2026-09-20
+
+First public release: the failure-mode catalogue (`docs/01`), the mechanism-building practices
+(`docs/02`), portable design across agents (`docs/03`), 12 guidelines, and an installer that can be
+installed and removed cleanly.

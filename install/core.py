@@ -43,7 +43,11 @@ import shutil
 import sys
 from pathlib import Path
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
+# ⚠ 版本号是**单一事实源**：它渲染进注入块的 `BEGIN vX.Y.Z` 标记行（`AGENTS.md:1`）。
+#   ⇒ 改版本号必须跟着 `sync` 重写派生块，否则安装器会认为"块过期"而反复重写。
+#   1.0.0 → 1.1.0（2026-09-21）：新增准则 13（准入≠清理）与 14（改了文件≠行为变了），
+#   并把两个实测形态并入 06 / 10。见 `CHANGELOG.md`。
 # ⚠ 2026-09-20 修：原为 `\s*$`。在 `re.M` 下 `\s` **会吃掉行尾换行** ⇒ 匹配区间越过 `\n`
 #   ⇒ 替换后**少一个换行** ⇒ 第二次安装仍判「有变化」⇒ **不幂等**（每次 sync 都重写文件）。
 #   `selfcheck` 没抓到这个（它当时没有幂等用例）—— 已补。
@@ -233,6 +237,30 @@ def doc_parity_problems(docs: Path, exclude: set[str] | None = None) -> list[str
         zh = docs / (f.name[:-6] + ".md")
         if not zh.exists():
             out.append(f"{f.name}：缺中文对偶（{zh.name}）")
+    return out
+
+
+# ────────────────────────────────────── 钩子清单 vs 准则源（易漂移的手工清单）
+HOOK_CHECKLIST_RE = re.compile(r'^[ \t]*"(\d{2})\s', re.M)
+
+
+def hook_checklist_problems(hook_text: str, guide_nums: set[str]) -> list[str]:
+    """`hooks/pre-commit` 里那份**手工维护**的准则清单，与 `guidelines/*.md` 是否同步。
+
+    ⚠ 为什么需要这道检查（**它本身就是本仓库准则 06 的实例**）：
+      那份清单**不可能派生** —— 钩子会被装进**使用者的仓库**，那种地方**没有 `guidelines/`**，
+      所以清单必须**自带**。⇒ 于是它**必然手工维护**，也就**必然漂移**。
+      而它**只是打印**、不阻塞任何东西 ⇒ **沉默与「清单是全的」不可区分**。
+    ⇒ 判据：**清单里的编号集合 == 准则目录里的编号集合**；两侧任一多/少都报出来。
+    """
+    listed = set(HOOK_CHECKLIST_RE.findall(hook_text))
+    out: list[str] = []
+    miss = sorted(guide_nums - listed)
+    extra = sorted(listed - guide_nums)
+    if miss:
+        out.append(f"钩子清单**少了**：{miss}")
+    if extra:
+        out.append(f"钩子清单**多了**（准则已删或改号）：{extra}")
     return out
 
 
@@ -750,6 +778,27 @@ def cmd_selfcheck(a) -> int:
         print(f"    [!!] **两种语言的条目集合不一致** —— "
               f"只在中文: {sorted(_zh - _en)}；只在英文: {sorted(_en - _zh)}")
         print("         ⇒ 两份注入块会**静默漂移**。补上缺的那边，或删掉多的那边。")
+        bad += 1
+
+    # ⚠ 2026-09-21 加：**钩子里那份手工清单**与准则源同步。
+    #   加准则 13/14 时它当场就是"少两条"的状态 —— 而它只打印、不阻塞 ⇒ 没人会知道。
+    _hookp = ROOT / "hooks" / "pre-commit"
+    _hp: list[str] = []
+    try:
+        _hp = hook_checklist_problems(_hookp.read_text(encoding="utf-8"), _zh)
+    except OSError as e:
+        _hp = [f"读不到钩子（**不是通过**）：{e}"]
+    print(f"    {'[OK]' if not _hp else '[!!]'} 钩子清单与准则同步"
+          + ("" if not _hp else " —— " + "；".join(_hp)))
+    bad += len(_hp)
+    # 喂靶（准则 10）：**合成一个"少一条"的清单，它必须报**；否则判据恒真。
+    _feed_bad = '"01 a" \\\n"02 b" \\\n'
+    if not hook_checklist_problems(_feed_bad, {"01", "02", "03"}):
+        print("    [!!] 喂靶失败：清单少一条却没报出来 ⇒ 判据恒真")
+        bad += 1
+    _feed_ok = '"01 a" \\\n"02 b" \\\n"03 c" \\\n'
+    if hook_checklist_problems(_feed_ok, {"01", "02", "03"}):
+        print("    [!!] 喂靶失败：清单齐全却被报 ⇒ 假阳性")
         bad += 1
     else:
         print(f"    [OK] 中/英 条目集合一致（{len(_zh)} 条）")
