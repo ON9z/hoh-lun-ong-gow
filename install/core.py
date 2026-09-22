@@ -40,6 +40,7 @@ import os
 import platform
 import re
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -1079,13 +1080,12 @@ def cmd_selfcheck(a) -> int:
     #     所以把这条做成 selfcheck 的一项：**每次自检都查**，而不是靠人记得。
     #   ⚠ 判据配**喂靶**（准则 10）：喂一片写着旧版本的合成文本，它必须被判为不匹配 ——
     #     否则"没报"可能只是因为这条判据恒真。
-    import re as _re
     _readme = ROOT / "README.md"
     _expect = f"v{VERSION}"
 
     def _stale(text: str) -> set:
         """文本里出现的、且**不等于**当前版本的 ``vX.Y.Z``（= 会腐烂的那种声明）。"""
-        return {v for v in _re.findall(r"`(v\d+\.\d+\.\d+)`", text) if v != _expect}
+        return {v for v in re.findall(r"`(v\d+\.\d+\.\d+)`", text) if v != _expect}
 
     if not _readme.exists():
         print("    [--] 跳过（README.md 不在）")
@@ -1102,6 +1102,35 @@ def cmd_selfcheck(a) -> int:
             bad += 1
         else:
             print(f"    [OK] README 的版本声明与 VERSION 一致（{_expect}）；喂靶通过")
+
+    print("[6] 当前 VERSION 有没有同名 tag（**只提示，不阻断**）")
+    # ⚠ 2026-09-23 加：`v1.2.0` **整晚没有 tag 而无人知** —— 版本号升了、CHANGELOG 写了、
+    #   提交推了、`selfcheck` 全绿，但 **`refs/tags/v1.2.0` 不存在**，Release 页也没动。
+    #   根因不是"忘了点一下"，是**没有任何东西在问这个问题**。
+    #   ⚠ 但**不能做成红**：正常的发布顺序是"先升 VERSION 提交、再打 tag"，
+    #     在那一小段窗口里"VERSION 有、tag 还没有"是**正确状态** ⇒ 做成红会天天假报警。
+    #     ⇒ 按本仓对哨兵的一贯口径：**只报告，不阻断**（`bad` 不加）。
+    try:
+        _tags = subprocess.run(["git", "tag", "-l", f"v{VERSION}"], cwd=str(ROOT),
+                               capture_output=True, text=True, timeout=15).stdout.split()
+        _all = subprocess.run(["git", "tag", "-l", "v*"], cwd=str(ROOT),
+                              capture_output=True, text=True, timeout=15).stdout.split()
+        if _tags:
+            print(f"    [OK] `v{VERSION}` 已有 tag（仓库共 {len(_all)} 个）")
+        else:
+            print(f"    [!] **`v{VERSION}` 还没有 tag** —— 已存在的：{sorted(_all)}")
+            print(f"        升了 VERSION 就要打 tag，否则版本在仓库里不存在、Release 页也不会动：")
+            print(f"            git tag -a v{VERSION} -m \"v{VERSION} — <主题>\" && git push origin v{VERSION}")
+    except FileNotFoundError:
+        print("    [--] 跳过（环境里没有 git）")      # 「不适用」—— 只有这一种才算跳过
+    except Exception as _e:
+        # ⚠ **别的异常不是"跳过"，是"这条检查自己坏了"** —— 必须计入 bad。
+        #   实测（2026-09-23）：第一版漏了 `import subprocess` ⇒ `NameError` 被上面那个
+        #   宽 `except` 兜成「[--] 跳过」，**看起来像这条检查不适用**，实际它从未跑过。
+        #   这正是本仓准则 09/10 说的那一族：**"没跑"被读成"没问题"**。
+        print(f"    [!!] **这条检查自己坏了**（{type(_e).__name__}: {_e}）"
+              f" —— 不是「不适用」，是它从未真正跑过")
+        bad += 1
 
     print(f"\n结果：{'[OK] 全部通过' if bad == 0 else f'[!!] {bad} 项有问题'}")
     return 0 if bad == 0 else 1
