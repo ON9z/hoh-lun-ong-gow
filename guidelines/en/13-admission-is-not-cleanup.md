@@ -37,3 +37,31 @@ using **the freshness of a heartbeat file** (`<180s` means "an instance already 
 **⚠️ Boundary with guideline 06**: 06 asks "is this criterion **always true**" (it **never speaks**);
 this one asks "the criterion **speaks fine**, but it **only handles entry, never exit**".
 Both present as "looks like it is working".
+
+**⇒ A kindred shape: delegated *work* also needs a reclaim mechanism.**
+
+"Admission is not cleanup" asks "**who cleans up the objects already inside**".
+The same shape holds for **delegation**: for every piece of work you hand out,
+**if it never comes back, who takes it over, and when?**
+
+**Instance**: A repository-wide census was handed to an external executor. It died part-way through
+for an **external reason** (quota / balance / network), producing **nothing** -- and all the ledger
+recorded was one word: "**dispatched**".
+⇒ From that moment the ledger **looked in-progress** while in fact **nobody was doing it**; and the
+census existed precisely to answer "**a class that had never been surveyed by the system**"
+⇒ that class **became an unowned open item again**.
+
+⚠ The part most worth recording: at the time I had **deliberately** written "**I will not draw a
+conclusion myself**" and handed the conclusion over (the **discipline itself was right**).
+⇒ **Handing the right to conclude to an entity that may die is handing it to randomness.**
+
+**⇒ How to act**:
+
+① When dispatching, **write the takeover condition at the same time**: "if it has not reported by
+   **when**, **who** takes over, with what **fallback**".
+   (Same root as guideline 12, "predictions need an expiry": **a promise with no expiry is no promise**.)
+② Dispatched work **belongs in the same ledger**, and **"dispatched" alone is not enough** --
+   record the **expected artefact** and the **due moment**.
+③ Prefer to **build the bounded version yourself** as the reclaim action: a dispatched
+   "full census" usually has **a bounded version you can finish in ten minutes** --
+   do that first, then wait for the additive part.

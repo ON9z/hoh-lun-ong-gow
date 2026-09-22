@@ -164,7 +164,10 @@ for t in \
   "11 is this a human's word or an agent's?" \
   "12 predictions need an expiry date" \
   "13 admission is not cleanup (who removes what already got in?)" \
-  "14 edited is not loaded (is the running copy the new one?)" ; do
+  "14 edited is not loaded (is the running copy the new one?)" \
+  "15 a fix removes what depended on the bug" \
+  "16 a proxy anchor can be wrong in both directions" \
+  "17 half a fix is worse than none (count the layers)" ; do
   echo "      - $t"
 done
 echo

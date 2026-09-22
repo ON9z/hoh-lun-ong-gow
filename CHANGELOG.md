@@ -6,6 +6,54 @@ with the single source of truth being `install/core.py: VERSION`.
 
 ---
 
+## [1.2.0] — 2026-09-23
+
+**Theme: a fix is an action with consequences — and the consequences are the part nobody records.**
+All three new entries, plus two folded extensions, come from one night of work in which
+every change was made deliberately, verified, and *still* produced a second-order effect that
+nothing was watching for.
+
+### Added
+
+- **Guideline 15 — 修好一个故障，会移除一条依赖这个故障的隐性路径** · [`guidelines/15-a-fix-removes-what-depended-on-the-bug.md`](guidelines/15-a-fix-removes-what-depended-on-the-bug.md)
+  A long-running fault **grows its own ecosystem**: other mechanisms adapt to it, route around it,
+  or ride on top of it — adaptations that live in no design document. Fix the fault and those
+  adaptations vanish with it, unwarned, because **the path you dismantled was never written down**.
+  Measured instance: a keeper restarted a hanging service roughly 1–5 times a day, 28 days running,
+  **never a zero day** — and "restart" had quietly become the deployment mechanism for unrelated
+  changes. Fixing the hang would have removed it, and no dashboard measured the thing that stopped.
+
+- **Guideline 16 — 代理量当锚点会双向错：能直接量，就别用代理** · [`guidelines/16-a-proxy-anchor-can-be-wrong-in-both-directions.md`](guidelines/16-a-proxy-anchor-can-be-wrong-in-both-directions.md)
+  A proxy is chosen because it correlates with the truth — and that correlation is exactly what
+  hides the part it misses. A proxy does not fail by being "a bit off"; it fails by **lying in both
+  directions**. Measured instance: "newest commit time" used as the anchor for "is the running
+  process on old code?" — **false green** with uncommitted edits, **false red** when deploy preceded
+  commit, both hit on the same day. The fix is not a better threshold; it is a **direct measurement**
+  (newest source-file mtime), correct in both directions.
+
+- **Guideline 17 — 半个修复比没有修复更误导** · [`guidelines/17-half-a-fix-is-worse-than-none.md`](guidelines/17-half-a-fix-is-worse-than-none.md)
+  A criterion usually acts in **more than one layer** ("what counts as a hit" / "how it propagates").
+  Fixing only one layer does not remove the noise — it **changes its form**, and the new form
+  **looks more like a conclusion**. Measured instance: an exclusion set applied at the "hit" layer but
+  not the "propagation" layer turned 2776 obviously-noisy hits into 152 "high-specificity candidates"
+  that were **mostly still false** — i.e. **a trusted list**, which is exactly the one a human reads line by line.
+
+### Changed
+
+- **Guideline 09** gained two kindred shapes: **a lazily-printed log string is not a liveness probe**
+  (a string inside a lazy initialiser only appears on first use — so "0 hits" gets misread as
+  "the new code never ran"), and **a label is not behaviour** (`Enabled=True` plus a name that
+  promises a daily run, on a one-shot trigger that already expired, means it will never run again —
+  read the scheduler, not the label).
+- **Guideline 13** gained a kindred shape: **delegated *work* also needs a reclaim mechanism**.
+  A dispatched task that dies from an external cause leaves a ledger that says "dispatched" and
+  **looks in-progress while nobody is doing it**. The sharpest part: handing the right to conclude
+  to an entity that may die is handing it to randomness — so a dispatch must record **who takes
+  over, by when, with what fallback**.
+- README and the pre-commit checklist updated to 17; `VERSION` → `1.2.0`.
+
+---
+
 ## [1.1.0] — 2026-09-21
 
 **Theme: two failure modes that both present as "the mechanism looks like it is working".**

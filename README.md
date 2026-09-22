@@ -22,7 +22,7 @@ you will hit problems that **simply do not show up in single-turn evaluation**:
 | What you want | What to use |
 |---|---|
 | **Recognise** these failures | `docs/01`: failure modes classified by capability dimension; each has symptom / minimal reproduction / mitigation |
-| **Prevent** them | `docs/02` + `install/`: 14 guidelines plus an installer that can be installed and removed cleanly, putting them where the AI **reads them every session** |
+| **Prevent** them | `docs/02` + `install/`: 17 guidelines plus an installer that can be installed and removed cleanly, putting them where the AI **reads them every session** |
 | **Make them surface** | `docs/03` + `hooks/`: a commit hook / sentinels / a leak scan, so that "did not do it" and "did it wrong" both become visible |
 
 **When this is useful**: you are building an agent, or you have worked with an AI over a long horizon
@@ -206,7 +206,7 @@ See [`LICENSE`](LICENSE).
 | 你想 | 用什么 |
 |---|---|
 | **认出**这些毛病 | `docs/01`：按能力维度分类的失效模式，每条含现象 / 最小复现 / 缓解 |
-| **防住**它们 | `docs/02` + `install/`：14 条准则，加一个可装可卸的安装器，把准则放到 AI **每次都会读到**的地方 |
+| **防住**它们 | `docs/02` + `install/`：17 条准则，加一个可装可卸的安装器，把准则放到 AI **每次都会读到**的地方 |
 | **让它自己露出来** | `docs/03` + `hooks/`：提交钩子 / 哨兵 / 泄漏扫描，让「没做」和「做错了」都瞒不住 |
 
 **什么时候用得上**：你在做 Agent，或者你已经和 AI 长期协作过，并且遇到过「它说『已经做完了』，结果不对」。
@@ -266,7 +266,7 @@ See [`LICENSE`](LICENSE).
 
 ## 安装（**可执行，不只是文档**）
 
-本仓库带一个安装器，把 14 条工程准则装进你的 Agent 配置，并**幂等、可精确卸载**。
+本仓库带一个安装器，把 17 条工程准则装进你的 Agent 配置，并**幂等、可精确卸载**。
 
 ```bash
 sh    install/install.sh    install --agent claude            # 先 dry-run，看它要改什么
