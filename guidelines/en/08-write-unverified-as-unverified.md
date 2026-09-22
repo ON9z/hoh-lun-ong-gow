@@ -28,3 +28,30 @@ changed from "**measure a number, report it**" to "**get a second method to agre
 unreliable. Adding a gate at the exit is a process problem: install it and it works immediately,
 and it does not require the criteria to improve first.**
 **=> Do not wait for the criteria to get better; install the gate.**
+
+**⇒ A kindred shape: the boundary must travel with the claim -- every time you restate a
+conclusion, re-attach its scope.**
+
+**Measured (2026-09-23, same person, same night):**
+
+- In the **written artefact**, I recorded the honest boundary:
+  > "**you cannot conclude this path is clean from this**: the tool has many false positives and
+  > its **recall is unknown**."
+- The same night, **restating the same thing in conversation**, I said:
+  > "**this path is swept clean.**"
+
+⇒ **Both statements were about the same thing, and the second erased the first one's honesty.**
+
+**⇒ Why this happens so easily**: writing the artefact puts you in a **delivery** frame --
+you spell out every limit. Restating it in conversation puts you in a **reporting** frame --
+you **compress to one conclusion**, and **the first thing compression removes is the scope**
+(qualifiers are the shortest, most boilerplate-looking, most cuttable words).
+
+**⇒ Criterion**:
+> Before restating a conclusion, ask: **"what qualifiers did I attach last time? Are they still
+> attached?"**
+
+**⇒ This is not "the criterion was inaccurate"** (the body of this guideline covers that) -- it is
+**the same criterion spoken at different strengths in different media**. The criterion was fine;
+**the restatement amplified it by one notch.** ⇒ So this gate too belongs at the **exit** --
+**at every exit**.

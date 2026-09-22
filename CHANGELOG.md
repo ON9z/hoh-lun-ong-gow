@@ -6,6 +6,43 @@ with the single source of truth being `install/core.py: VERSION`.
 
 ---
 
+## [1.3.0] — 2026-09-23
+
+**Theme: the guard you wrote *because of* one incident, and the conclusion that loses its scope
+when you repeat it.** Both new entries come from a single night of work, and both were found by
+turning the same lens on the work itself.
+
+### Added
+
+- **Guideline 18 — 照你看见过的那一次失败造的守卫，只在那个方向上有效** · [`guidelines/18-a-guard-shaped-to-the-failure-you-saw.md`](guidelines/18-a-guard-shaped-to-the-failure-you-saw.md)
+  When a failure appears, you hold **one sample**; the condition you extract hugs **that sample's
+  shape** — its wording, its exception type, its trigger path. The guard stops the misstep you
+  already took and is **blind to the other half of the same event**, while looking implemented
+  every second. Measured instance: a "ban cooldown" matched two exact `RemoteDisconnected`
+  strings — so a **timeout** in the same handler **never set the cooldown**, retried with blocking
+  sleeps, and across a per-symbol call site (200+ per pass) cost up to **~60 minutes** —
+  **the cooldown never once took effect**, having waited for a string that never appears.
+  Criterion: is X the kind you **saw**, or the class you **defined**?
+
+### Changed
+
+- **Guideline 08** gained a kindred shape: **the boundary must travel with the claim.**
+  Measured on the same night: the written artefact recorded the honest limit ("you **cannot**
+  conclude this path is clean — the tool's recall is unknown"), and the **conversation** restated
+  the same finding as "**this path is swept clean**". Not an inaccurate criterion — the **same
+  criterion spoken at two strengths**, because compression removes the scope first.
+  Criterion: *before restating a conclusion, ask what qualifiers you attached last time.*
+- **Guideline 17** gained the other kind of "only part of it": **the same shape at multiple *call
+  sites*.** Measured: one fix shape ("no unbounded network call on the tick thread") appeared
+  **four times in the same file**; the fixing was **pushed along by incidents**, so four sites took
+  **four rounds**, two of them a full night apart. Criterion: after fixing one site, **write the
+  shape as a searchable sentence and go search**; extract a shared unit; turn "a new site appeared"
+  into a criterion that goes red; and **delete the registry entry once fixed** (otherwise the
+  allow-list becomes a list of what once existed — Guideline 13's family).
+- README and the pre-commit checklist updated to 18; `VERSION` → `1.3.0`.
+
+---
+
 ## [1.2.0] — 2026-09-23
 
 **Theme: a fix is an action with consequences — and the consequences are the part nobody records.**

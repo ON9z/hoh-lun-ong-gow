@@ -43,3 +43,24 @@ the former piles up; the latter **swaps the list you intend to read for a more t
 **⚠️ Boundary with Guideline 05**: 05 is "assertions must be two-sided". This one is "**a fix must
 cover every layer it acts on**" -- you can verify every assertion in both directions and **still
 add the filter at only one layer**.
+
+**⚠️ The other kind of "only part of it": the same shape at multiple *call sites*.**
+
+The above is about "several **layers of action** within one criterion". The same **fix shape** also
+recurs at multiple **call sites**:
+
+- **Measured (2026-09-23)**: a fix for "**no unbounded network call on the tick thread**" appeared
+  **four times in the same file** (one collector thread / one batch fetch / **two per-symbol
+  fetches**), and the fixing was **pushed along by incidents**: first incident fixes one site,
+  second incident fixes another... **four sites took four rounds**, two of them a full night apart --
+  and they were **the same shape**.
+- ⇒ **After fixing one site, always ask: "does this shape exist anywhere else?"**
+  Criterion: **write the shape as a searchable sentence** (e.g. "a network call inside a loop body")
+  and **go search** -- do not rely on "I think that was all".
+- ⇒ Four copies of the same implementation ⇒ **four things that drift** (one gets improved, the
+  other three never hear about it). **Extract a shared unit**, and **turn "a new site appeared"
+  into a criterion that goes red** (a registry / a static assertion) -- otherwise when the fifth
+  site shows up, nobody knows where to add it.
+- ⚠ **On closing out, check the reverse too**: once a site is fixed, that registry entry must be
+  **deleted** -- otherwise the allow-list accumulates monotonically and slowly becomes a list of
+  "**what once existed**" instead of "**what is**" (the same family as Guideline 13).
