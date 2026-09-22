@@ -1071,6 +1071,38 @@ def cmd_selfcheck(a) -> int:
                   "但它会**同时改写你的 agent 配置**）")
             bad += 1
 
+    print("[5] README 声明的「当前版本」 与 install/core.py: VERSION 是否一致")
+    # ⚠ 2026-09-23 加，因为**它当场腐烂了**：VERSION 从 1.1.0 升到 1.3.0，
+    #   而 README **三处**（en / zh / TW）一直写着「当前 `v1.1.0`」——
+    #   正是本仓库自己记过的病：「**手写的数字会腐烂**（19→28 那次）」。
+    #   ⇒ 生成器只维护"统计行"那一类派生数字，**管不到 README 里手写的版本号**；
+    #     所以把这条做成 selfcheck 的一项：**每次自检都查**，而不是靠人记得。
+    #   ⚠ 判据配**喂靶**（准则 10）：喂一片写着旧版本的合成文本，它必须被判为不匹配 ——
+    #     否则"没报"可能只是因为这条判据恒真。
+    import re as _re
+    _readme = ROOT / "README.md"
+    _expect = f"v{VERSION}"
+
+    def _stale(text: str) -> set:
+        """文本里出现的、且**不等于**当前版本的 ``vX.Y.Z``（= 会腐烂的那种声明）。"""
+        return {v for v in _re.findall(r"`(v\d+\.\d+\.\d+)`", text) if v != _expect}
+
+    if not _readme.exists():
+        print("    [--] 跳过（README.md 不在）")
+    else:
+        _probe = _stale("Current: `v0.0.1`.")
+        _bad = _stale(_readme.read_text(encoding="utf-8", errors="replace"))
+        if _probe != {"v0.0.1"}:
+            print("    [!!] **喂靶失败** —— 连合成样本都没被识别 ⇒ 这条判据是假的")
+            bad += 1
+        elif _bad:
+            print(f"    [!!] README 里有**过期**的版本声明 {sorted(_bad)}，"
+                  f"而 VERSION = {_expect}")
+            print(f"         ⇒ 改成 `{_expect}`（README 一般三处：en / zh / TW）")
+            bad += 1
+        else:
+            print(f"    [OK] README 的版本声明与 VERSION 一致（{_expect}）；喂靶通过")
+
     print(f"\n结果：{'[OK] 全部通过' if bad == 0 else f'[!!] {bad} 项有问题'}")
     return 0 if bad == 0 else 1
 
