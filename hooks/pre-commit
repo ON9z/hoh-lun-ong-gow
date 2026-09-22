@@ -168,7 +168,8 @@ for t in \
   "15 a fix removes what depended on the bug" \
   "16 a proxy anchor can be wrong in both directions" \
   "17 half a fix is worse than none (count the layers)" \
-  "18 a guard shaped to the failure you saw is one-sided" ; do
+  "18 a guard shaped to the failure you saw is one-sided" \
+  "19 read the subject's own declaration BEFORE you measure it" ; do
   echo "      - $t"
 done
 echo

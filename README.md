@@ -22,7 +22,7 @@ you will hit problems that **simply do not show up in single-turn evaluation**:
 | What you want | What to use |
 |---|---|
 | **Recognise** these failures | `docs/01`: failure modes classified by capability dimension; each has symptom / minimal reproduction / mitigation |
-| **Prevent** them | `docs/02` + `install/`: 18 guidelines plus an installer that can be installed and removed cleanly, putting them where the AI **reads them every session** |
+| **Prevent** them | `docs/02` + `install/`: 19 guidelines plus an installer that can be installed and removed cleanly, putting them where the AI **reads them every session** |
 | **Make them surface** | `docs/03` + `hooks/`: a commit hook / sentinels / a leak scan, so that "did not do it" and "did it wrong" both become visible |
 
 **When this is useful**: you are building an agent, or you have worked with an AI over a long horizon
@@ -42,7 +42,7 @@ example has been abstracted.
 | [`docs/01-failure-modes-in-long-horizon-collaboration.en.md`](docs/01-failure-modes-in-long-horizon-collaboration.en.md) | **Failure modes classified by capability dimension**: instruction following / long-context retrieval / tool use / code generation and self-modification / reasoning / factuality and metacognition / multi-step and agentic collaboration. Each entry has: symptom · minimal reproduction · mitigation · suggestion for model developers |
 | [`docs/02-mechanisms-for-ai-assisted-engineering.en.md`](docs/02-mechanisms-for-ai-assisted-engineering.en.md) | **A set of practices for turning "criticism and lessons" into mechanisms**: the four-gates criterion / automatic guideline injection / a dictionary of error types / a checklist-reconciliation hook / a dispatch template / **criteria and counterexamples for using subagents and teams** / prediction expiry / authorization boundaries / a single source of truth / mechanism self-proof |
 | [`docs/03-portable-mechanism-design.en.md`](docs/03-portable-mechanism-design.en.md) | **Making mechanisms work across agents**: the host capability matrix / **the five-layer design L0–L4** / why the **commit hook** is the broadest common ground across agents / capability probing / per-layer self-proof / privacy (the diagnostic bundle carries structure, not content) |
-| [`CHANGELOG.md`](CHANGELOG.md) | **What changed, version by version** — each entry states the failure mode in its own words, the measurement behind it, and how it was verified. Current: `v1.3.0`. |
+| [`CHANGELOG.md`](CHANGELOG.md) | **What changed, version by version** — each entry states the failure mode in its own words, the measurement behind it, and how it was verified. Current: `v1.3.1`. |
 
 ---
 
@@ -206,7 +206,7 @@ See [`LICENSE`](LICENSE).
 | 你想 | 用什么 |
 |---|---|
 | **认出**这些毛病 | `docs/01`：按能力维度分类的失效模式，每条含现象 / 最小复现 / 缓解 |
-| **防住**它们 | `docs/02` + `install/`：18 条准则，加一个可装可卸的安装器，把准则放到 AI **每次都会读到**的地方 |
+| **防住**它们 | `docs/02` + `install/`：19 条准则，加一个可装可卸的安装器，把准则放到 AI **每次都会读到**的地方 |
 | **让它自己露出来** | `docs/03` + `hooks/`：提交钩子 / 哨兵 / 泄漏扫描，让「没做」和「做错了」都瞒不住 |
 
 **什么时候用得上**：你在做 Agent，或者你已经和 AI 长期协作过，并且遇到过「它说『已经做完了』，结果不对」。
@@ -223,7 +223,7 @@ See [`LICENSE`](LICENSE).
 | [`docs/01-failure-modes-in-long-horizon-collaboration.md`](docs/01-failure-modes-in-long-horizon-collaboration.md) | **按能力维度分类的失效模式**：指令遵循 / 长上下文检索 / 工具使用 / 代码生成与自我修改 / 推理 / 事实性与自我评估 / 多步与代理协作。每条含：现象 · 最小复现 · 缓解 · 对模型方的建议 |
 | [`docs/02-mechanisms-for-ai-assisted-engineering.md`](docs/02-mechanisms-for-ai-assisted-engineering.md) | **把"批评教训"变成机制的一套做法**：四道门判据 / 准则自动注入 / 错误类型字典 / 清单对账钩子 / 派工模板 / **子 Agent 与团队的使用判据与反例** / 预测到期 / 授权边界 / 单一事实源 / 机制自证 |
 | [`docs/03-portable-mechanism-design.md`](docs/03-portable-mechanism-design.md) | **让机制跨 Agent 生效**：宿主能力矩阵 / **五层设计 L0–L4** / 为什么**提交钩子**是跨 Agent 的最大公约数 / 能力探测 / 逐层自证 / 隐私（诊断包只含结构不含内容） |
-| [`CHANGELOG.md`](CHANGELOG.md) | **逐版本的变更记录** —— 每条用自己的话讲清失效模式、背后的实测、以及它如何被验证。当前 `v1.3.0`。 |
+| [`CHANGELOG.md`](CHANGELOG.md) | **逐版本的变更记录** —— 每条用自己的话讲清失效模式、背后的实测、以及它如何被验证。当前 `v1.3.1`。 |
 
 ---
 
@@ -266,7 +266,7 @@ See [`LICENSE`](LICENSE).
 
 ## 安装（**可执行，不只是文档**）
 
-本仓库带一个安装器，把 18 条工程准则装进你的 Agent 配置，并**幂等、可精确卸载**。
+本仓库带一个安装器，把 19 条工程准则装进你的 Agent 配置，并**幂等、可精确卸载**。
 
 ```bash
 sh    install/install.sh    install --agent claude            # 先 dry-run，看它要改什么
@@ -372,7 +372,7 @@ install\install.cmd status                                     # cmd.exe
 | [`docs/01-failure-modes-in-long-horizon-collaboration.md`](docs/01-failure-modes-in-long-horizon-collaboration.md) | **按能力維度分類的失效模式**：指令遵循 / 長上下文檢索 / 工具使用 / 程式碼生成與自我修改 / 推理 / 事實性與自我評估 / 多步與代理協作。每條含：現象 · 最小重現 · 緩解 · 對模型方的建議 |
 | [`docs/02-mechanisms-for-ai-assisted-engineering.md`](docs/02-mechanisms-for-ai-assisted-engineering.md) | **把「批評教訓」變成機制的一套做法**：四道門判據 / 準則自動注入 / 錯誤類型字典 / 清單對帳鉤子 / 派工模板 / **子 Agent 與團隊的使用判據與反例** / 預測到期 / 授權邊界 / 單一事實源 / 機制自證 |
 | [`docs/03-portable-mechanism-design.md`](docs/03-portable-mechanism-design.md) | **讓機制跨 Agent 生效**：宿主能力矩陣 / **五層設計 L0–L4** / 為什麼**提交鉤子**是跨 Agent 的最大公約數 / 能力偵測 / 逐層自證 / 隱私（診斷包只含結構不含內容） |
-| [`CHANGELOG.md`](CHANGELOG.md) | **逐版本的變更記錄** —— 每條用自己的話講清失效模式、背後的實測、以及它如何被驗證。目前 `v1.3.0`。 |
+| [`CHANGELOG.md`](CHANGELOG.md) | **逐版本的變更記錄** —— 每條用自己的話講清失效模式、背後的實測、以及它如何被驗證。目前 `v1.3.1`。 |
 
 ---
 

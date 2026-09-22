@@ -6,6 +6,48 @@ with the single source of truth being `install/core.py: VERSION`.
 
 ---
 
+## [1.3.1] — 2026-09-23
+
+**Theme: the measurement was right and the verdict was wrong.** A night of auditing a real
+system produced a clean measurement — "the buy side has been at zero for twelve trading days" —
+which was **about to be filed as a defect**. It was, in fact, **the system's own deliberate
+closure**, and its module docstring says so in its first eight lines.
+
+### Added
+
+- **Guideline 19 — 先读它自己声明的规矩，再下断言 —— 而且要读在动手之前** · [`guidelines/19-read-the-subjects-own-declaration-first.md`](guidelines/19-read-the-subjects-own-declaration-first.md)
+  A measurement answers "**what happened**"; the subject's own declaration answers
+  "**is this intentional**". Without the second sentence the first is read as a bug.
+  Measured instance: a gate had blocked **2,598 BUY signals (and 0 SELL)** since a given date,
+  because the project had decided **short-horizon alpha was dead** — the module's docstring
+  says so, names the surviving legitimate forms, and the execution ledger contains
+  **exactly those forms**. **The sharpest part is not "I never read it"**: the code comment
+  deciding that behaviour **had been read before the measurement** — read, and the "discovery"
+  made anyway. ⇒ **The defect is in the ORDER of reading, not in the reading.**
+  Criterion: before typing "defect", answer "**which lines are this object's self-declaration,
+  and have I read them?**" Cannot answer ⇒ do not write it yet.
+
+### Not added — a duplicate check was written and then deleted
+
+- A `selfcheck` item comparing the **commit hook's printed checklist** against `guidelines/` was
+  written, given a known-bad probe, and **it went red correctly**. It was then **removed**.
+  **It was a duplicate**: `install/core.py: hook_checklist_problems()` (runs under index `[1]`)
+  already compared the two **sets** in **both** directions, and its docstring already carried the
+  exact portability argument the new item was "discovering"
+  ("the hook installs into a **user's** repo, where there is no `guidelines/`").
+  ⚠ **What found it was not a review — it was the red test.** Deleting the hook's entry to prove
+  the new check would fire produced **three** failures, one of them the **older** check.
+  ⇒ **This is Guideline 19 performed against this very commit**: the declaration sat at
+  `core.py:258`, reasoning included, unread.
+  ⇒ Net kept: **nothing**. The pre-existing check already covers it. The three places the count
+  lives (`VERSION`/CHANGELOG, `README.md`, hook) each already have a watcher `[5]` / `[1]`.
+
+### Changed
+
+- README (all language sections) and `install/core.py: VERSION` → `1.3.1`.
+
+---
+
 ## [1.3.0] — 2026-09-23
 
 **Theme: the guard you wrote *because of* one incident, and the conclusion that loses its scope
