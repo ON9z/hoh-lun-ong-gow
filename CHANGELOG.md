@@ -6,6 +6,65 @@ with the single source of truth being `install/core.py: VERSION`.
 
 ---
 
+## [1.3.4] — 2026-09-24
+
+**Theme: the consumer splits on a raw delimiter, so the *content* decides which cell is the status column.**
+A ledger row flipped from "closed" to "open" because a note appended to it contained four raw pipe
+characters — the "status cell" slid onto the new fragment. The row in question documented
+*"this file's table structure is corrupted"*. **The defect was reproduced on the row that documents it.**
+
+### Added
+
+- **Guideline 22 — 内容里的分隔符会把这一行重新分栏 —— 而新的分栏看起来一样正常** · [`guidelines/22-a-delimiter-in-the-content-re-partitions-the-row.md`](guidelines/22-a-delimiter-in-the-content-re-partitions-the-row.md)
+  A consumer that splits on a **raw delimiter** (Markdown `split("|")`, CSV `split(",")`) does not honour
+  escaping — `\|` is still a delimiter to it. ⇒ **"which cell is the status column" is decided by the content.**
+  Measured instance: appending prose containing 4 raw pipes to a ledger row moved the status boundary onto
+  a fragment containing `⛔` ⇒ **the open-item count went 185 → 186**. Localised with **no guessing** by
+  reverting each append **separately on a copy** and re-running the parser.
+  ⚠ **The worse half**: after removing the pipes the row flipped back to "closed" — **by coincidence**
+  (the last cell is a keyword-free fragment). **A verdict that "looks right" is more dangerous than one that errors.**
+  Criterion: before writing into a structured row, ask "**does the delimiter occur in here?**",
+  and when a structured consumer's count moves by ±1 for no reason, **suspect the delimiter before the semantics**.
+
+### Fixed — a version that advanced while its own changelog did not
+
+- **`selfcheck` [7]: CHANGELOG must contain an entry for the current `VERSION`.**
+  ⚠ Measured: the `1.3.2` and `1.3.3` commits **never touched `CHANGELOG.md`**
+  (`git show --stat` — neither file list contains it) ⇒ `VERSION` moved, the README version claims were
+  updated, `selfcheck` stayed **green**, and the changelog's last entry stayed at `1.3.1` —
+  i.e. the README sentence *"Current: v1.3.4"* pointed at a file with no `1.3.4` in it.
+  **A lying artifact, produced by three green checks.**
+  ⚠ Root cause is the same shape as the `v1.2.0`-had-no-tag incident that `[6]` was added for:
+  **not "somebody forgot", but "nothing was asking the question"** — and the check added then covered
+  the tag axis but **not the changelog axis**.
+  Made **red** (same as `[5]`): there is **no legitimate window** — the entry belongs in the same commit
+  as the version bump. Verified by feeding it the real defect: **`[7]` went red and named the stale head (`1.3.1`)**
+  before the entry existed, and green after.
+
+## [1.3.3] — 2026-09-24
+
+### Added
+
+- **Guideline 21 — 一个**看得见**的阈值会被优化掉** · [`guidelines/21-a-visible-threshold-gets-gamed.md`](guidelines/21-a-visible-threshold-gets-gamed.md)
+  Criterion: **can the thing this threshold constrains *see* the threshold?**
+  If it can ⇒ ⚠ **it is no longer a boundary, it is an optimization target** —
+  and the more visible it is (a printed score, a line in a prompt, a hard cap quoted in the same context),
+  the faster it gets optimized away. ⚠ Measured instance in this repo's own tooling: a **quota** whose
+  remaining count is printed back to the very agent it constrains.
+
+## [1.3.2] — 2026-09-24
+
+### Added
+
+- **Guideline 20 — 隐患被一个默认值挡着，看起来像不存在** · [`guidelines/20-a-guard-hidden-by-a-default.md`](guidelines/20-a-guard-hidden-by-a-default.md)
+  Criterion: **this hazard is already in the code — so why has it never fired?**
+  Separate ① **it doesn't exist** from ② **it exists, and every single time the same default blocks it**.
+  Answering ① when the truth is ② ⇒ **you have recorded "a blocked hazard" as "no hazard"** —
+  and the blocking default is protected by no criterion and measured by no instrument.
+  Two measured instances: an impact-cost function whose only call site passes `skip_slippage=True`
+  (so it never runs in production, and nobody has to answer where its coefficient came from);
+  and an LLM client that falls back to **another provider's key** while keeping the original endpoint.
+
 ## [1.3.1] — 2026-09-23
 
 **Theme: the measurement was right and the verdict was wrong.** A night of auditing a real

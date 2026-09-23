@@ -44,7 +44,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "1.3.3"
+VERSION = "1.3.4"
 # ⚠ 版本号是**单一事实源**：它渲染进注入块的 `BEGIN vX.Y.Z` 标记行（`AGENTS.md:1`）。
 #   ⇒ 改版本号必须跟着 `sync` 重写派生块，否则安装器会认为"块过期"而反复重写。
 #   1.0.0 → 1.1.0（2026-09-21）：新增准则 13（准入≠清理）与 14（改了文件≠行为变了），
@@ -1135,6 +1135,30 @@ def cmd_selfcheck(a) -> int:
         #   这正是本仓准则 09/10 说的那一族：**"没跑"被读成"没问题"**。
         print(f"    [!!] **这条检查自己坏了**（{type(_e).__name__}: {_e}）"
               f" —— 不是「不适用」，是它从未真正跑过")
+        bad += 1
+
+    print("[7] CHANGELOG 有没有当前 VERSION 的条目")
+    # ⚠ 2026-09-24 加：实测 **`1.3.2` / `1.3.3` 两次提交都没碰 `CHANGELOG.md`**
+    #   —— VERSION 升了 · README 版本声明改了（[5] 绿）· tag 也提示了（[6]），
+    #   ⚠ **而 CHANGELOG 的最后一条停在 `1.3.1`** ⇒ README 那句「Current: v1.3.4」
+    #   指向一个**不含 1.3.4 的文件**（**那是一个在说谎的工件**）。
+    #   ⚠ **根因与 [6] 同形：不是"忘了写"，是【没有任何东西在问这个问题】**
+    #     —— 而 [6] 那条同类检查当时是**为 v1.2.0 缺 tag** 才加的，却**没覆盖 CHANGELOG 这一轴**。
+    #   ⚠ **做成红**（与 [5] 同口径）："CHANGELOG 与 VERSION 同步"**没有合法窗口** ——
+    #     条目应当与升版**同一次提交**，∴ 不同步就是缺陷，不是过渡态。
+    try:
+        _cl = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8", errors="replace")
+        if f"## [{VERSION}]" in _cl:
+            print(f"    [OK] CHANGELOG 含 `## [{VERSION}]`")
+        else:
+            _heads = re.findall(r"^## \[([^\]]+)\]", _cl, re.M)
+            print(f"    [!!] **CHANGELOG 里没有 `## [{VERSION}]`** —— "
+                  f"最后一条是 `{_heads[0] if _heads else '（一条都没有）'}`，"
+                  f"而 VERSION = {VERSION}")
+            print(f"         ⇒ 补一条 `## [{VERSION}] — <日期>`（与升版同一次提交）")
+            bad += 1
+    except OSError as e:
+        print(f"    [!!] **读不到 CHANGELOG（不是通过）**：{e}")
         bad += 1
 
     print(f"\n结果：{'[OK] 全部通过' if bad == 0 else f'[!!] {bad} 项有问题'}")
