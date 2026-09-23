@@ -44,7 +44,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "1.3.1"
+VERSION = "1.3.2"
 # ⚠ 版本号是**单一事实源**：它渲染进注入块的 `BEGIN vX.Y.Z` 标记行（`AGENTS.md:1`）。
 #   ⇒ 改版本号必须跟着 `sync` 重写派生块，否则安装器会认为"块过期"而反复重写。
 #   1.0.0 → 1.1.0（2026-09-21）：新增准则 13（准入≠清理）与 14（改了文件≠行为变了），
