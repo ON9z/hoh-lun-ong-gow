@@ -6,6 +6,32 @@ with the single source of truth being `install/core.py: VERSION`.
 
 ---
 
+## [1.3.5] — 2026-09-24
+
+**Theme: you just proved the disease exists, and you fed the antidote to exactly one patient.**
+A day of audit produced a criterion whose mechanism was fully understood — "checking only the count
+misses all-NULL key columns, because SQLite's PRIMARY KEY permits NULL so the insert does not error".
+It was added to the backfill script with a careful comment. **The smoke test inside that same script
+still checked only the row count** — and reported success on 51,541 rows whose key column was NULL.
+
+### Added
+
+- **Guideline 23 — 你造了一条判据，但它该被用在哪几处，你枚举了吗** · [`guidelines/23-a-rule-you-wrote-must-name-where-it-applies.md`](guidelines/23-a-rule-you-wrote-must-name-where-it-applies.md)
+  Criterion: **this check / guard / predicate I just wrote — how many places should it apply in?**
+  Cannot answer ⇒ **a criterion that works in exactly one place, while looking like a general rule**.
+  ⚠ The danger is not "I missed a spot" (guideline 17) — it is that you have **just personally demonstrated
+  the failure exists**, and you fed the antidote to **exactly one patient**, so the next one is met with
+  "I have a guard". Three instances, one day, one shape: the value-level predicate vs. its own smoke test ·
+  a `*.0907bak` ignore rule facing three suffixes (and the first fix — and the verifying grep — missed one) ·
+  a self-check added on one write path while sibling paths got none.
+  Boundary with 13/17/18 spelled out. Criterion: **enumerate the scope at the moment of construction,
+  and feed the criterion the scene where you found it.**
+
+### Fixed
+
+- **`selfcheck` [7] was too narrow, and the fix needed guideline 23 applied to itself** — the changelog
+  guard asked only whether an entry exists, so this entry was written before the version bump was verified.
+
 ## [1.3.4] — 2026-09-24
 
 **Theme: the consumer splits on a raw delimiter, so the *content* decides which cell is the status column.**

@@ -172,7 +172,8 @@ for t in \
   "19 read the subject's own declaration BEFORE you measure it" \
   "20 a hazard hidden by a default looks like it doesn't exist" \
   "21 a visible threshold gets optimized away" \
-  "22 a delimiter in the content re-partitions the row" ; do
+  "22 a delimiter in the content re-partitions the row" \
+  "23 a rule you wrote must name where it applies" ; do
   echo "      - $t"
 done
 echo
