@@ -6,6 +6,35 @@ with the single source of truth being `install/core.py: VERSION`.
 
 ---
 
+## [1.3.6] — 2026-09-25
+
+**Theme: four times in one day, the thing I "discovered" had already been written down — and three times my version was the weaker one.**
+
+I spent a long session re-deriving what the repository already contained, because I searched for **one keyword**
+instead of **listing the names of the domain first**. A single `ls` would have ended each of the four episodes
+before it started. The most expensive part was not the wasted effort — it was that **my output was, three times
+out of four, less precise than the artefact that already existed** (no line numbers, no provenance, no
+"confirmed in use" check). Duplication costs one pass; **degradation costs the reader the better source**.
+
+### Added
+
+- **Guideline 24 — 进任何域之前，先列出它的名字 —— grep 只在你猜对了词时有效** · [`guidelines/24-list-the-domain-before-you-search.md`](guidelines/24-list-the-domain-before-you-search.md)
+  Criterion: **before I conclude "this domain contains X / does not contain X" — have I listed the names of
+  this domain?** Directory listing (`ls`) · or a single file's section skeleton (`grep -nE "^#{1,3} "`).
+  Cannot produce the list ⇒ **my grep was a guess**, and I will read its empty result as "does not exist".
+  ⚠ **The more expensive form**: you grep, you hit something *related*, and you conclude you found the
+  authority — while the authority sits in another file and states it more precisely.
+  Boundary with 7 (re-check a negative on a second path) · 19 (read the object's own declaration) ·
+  23 (enumerate the scope of the criterion you wrote) — and the reason this one comes **first**: without the
+  list you do not even know **which artefact to re-check or read**.
+  ⚠ Instances are dated and kept as they happened: one of the four was caught by **a peer**, not by me.
+
+### Changed
+
+- **`hooks/pre-commit` checklist synced to 24** — the hand-maintained list is checked by
+  `hook_checklist_problems()` against `guidelines/*.md` (bidirectional set equality). ⚠ The check only
+  **prints**; silence is indistinguishable from a complete list (it is itself an instance of guideline 06).
+
 ## [1.3.5] — 2026-09-24
 
 **Theme: you just proved the disease exists, and you fed the antidote to exactly one patient.**

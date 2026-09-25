@@ -173,7 +173,8 @@ for t in \
   "20 a hazard hidden by a default looks like it doesn't exist" \
   "21 a visible threshold gets optimized away" \
   "22 a delimiter in the content re-partitions the row" \
-  "23 a rule you wrote must name where it applies" ; do
+  "23 a rule you wrote must name where it applies" \
+  "24 list the domain before you search it (grep only answers if you guessed the word)" ; do
   echo "      - $t"
 done
 echo
