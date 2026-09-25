@@ -1113,6 +1113,44 @@ def cmd_selfcheck(a) -> int:
         else:
             print(f"    [OK] README 的版本声明与 VERSION 一致（{_expect}）；喂靶通过")
 
+    # ⚠ 2026-09-25 扩：**同一类检查的第二处** —— `AGENTS.md` 的**派生块头**。
+    #   判据仍是「声明的版本 vs VERSION」，但**腐烂的机制不同**：
+    #     · README：版本号是**手写**的 ⇒ 人会忘记改（就是上面那段说的病）；
+    #     · AGENTS.md：块头是**派生**的 ⇒ 它不会自己腐烂，**是「派生后没人重跑 sync」**
+    #       —— 而本文件 `:48` 逐字写着「改版本号**必须跟着 `sync` 重写派生块**」。
+    #   ⚠ 这正是准则 23 的形态：**上一轮它是一条【只在一处生效】的判据** ——
+    #     「声明 vs VERSION」这一对在 README 上被查了，在块头上没有。
+    #   ⚠ 实测（2026-09-25）：该块停在 **v1.2.0**，而 VERSION 已是 **1.3.6**
+    #     ⇒ **迟到 4 个版本、块里少准则 18–24**；⚠ 且**不是一次性的** ——
+    #     `b2aa424`（「1.3.5: add rule 23」）那次也没有同步。
+    _agents = ROOT / "AGENTS.md"
+    if not _agents.exists():
+        print("    [--] 跳过 AGENTS.md（不在）")
+    else:
+        _BLK_VER = re.compile(r"agent-lessons:BEGIN\s+v(\d+\.\d+\.\d+)")
+        # ⚠ 喂靶（准则 10）：合成样本必须能被读出来，否则「没报」可能只是判据恒真。
+        _probe2 = _BLK_VER.search("<!-- agent-lessons:BEGIN v0.0.1 --")
+        _m2 = _BLK_VER.search(_agents.read_text(encoding="utf-8", errors="replace"))
+        if not _probe2:
+            print("    [!!] **喂靶失败** —— 连合成样本都没被识别 ⇒ 这条判据是假的")
+            bad += 1
+        elif _m2 is None:
+            # ⚠ **没有块、或块头没有版本号 ⇒ 不红**：
+            #   首次安装前本来就没有块，而更早的格式也没有版本号 ——
+            #   `teams_of` 的 docstring 写着「**升级路径必须无损**，绝不让升级失败」。
+            #   ⛔ 别把「还没装」读成「不一致」。
+            print("    [--] AGENTS.md 无可读的块头版本（**未装 / 旧格式** ⇒ 不算不一致）")
+        elif f"v{_m2.group(1)}" != _expect:
+            print(f"    [!!] **AGENTS.md 的派生块头是 v{_m2.group(1)}，"
+                  f"而 VERSION = {_expect}** ⇒ 块里少了它之后的准则")
+            print("         ⇒ 修（**只写仓库内这一个文件**）：")
+            print("             install/core.py sync --agent generic --target . --apply")
+            print("           ⚠ 用 `generic`：`--agent claude` 写的是 `~/.claude/CLAUDE.md`，"
+                  "而**改用户配置属于要人点头的一类**（见 `[4]` 里同一条判据）")
+            bad += 1
+        else:
+            print(f"    [OK] AGENTS.md 的派生块头与 VERSION 一致（{_expect}）；喂靶通过")
+
     print("[6] 当前 VERSION 有没有同名 tag（**只提示，不阻断**）")
     # ⚠ 2026-09-23 加：`v1.2.0` **整晚没有 tag 而无人知** —— 版本号升了、CHANGELOG 写了、
     #   提交推了、`selfcheck` 全绿，但 **`refs/tags/v1.2.0` 不存在**，Release 页也没动。
