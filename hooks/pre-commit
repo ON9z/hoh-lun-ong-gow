@@ -175,7 +175,10 @@ for t in \
   "22 a delimiter in the content re-partitions the row" \
   "23 a rule you wrote must name where it applies" \
   "24 list the domain before you search it (grep only answers if you guessed the word)" \
-  "25 a truncated view is not a total one (no window can support a claim about the whole)" ; do
+  "25 a truncated view is not a total one (no window can support a claim about the whole)" \
+  "26 a mechanism that serves itself (every guard green, all output back into the machinery)" \
+  "27 fresh is not why you keep it (reachable is; four deletion criteria)" \
+  "28 an intermediary rewrites your text (never route metacharacters through it)" ; do
   echo "      - $t"
 done
 echo

@@ -6,6 +6,39 @@ with the single source of truth being `install/core.py: VERSION`.
 
 ---
 
+## [1.4.0] — 2026-09-29
+
+**Theme: the user asked "should there be this many guards?" — and the measurements said the guards were fine, and the machinery was eating everything.**
+
+I measured the 12 guards first: **12 guards = 5 invariant families, not one a duplicate of another**, each mapping to a
+different recorded incident. So the count was not the defect. Then I measured where the *effort* went — the last
+60 commits, spanning 4.4 hours: **~50 (83%) served the machinery itself, ~10 (17%) the task domain, and 0 produced
+the reason the system exists.** No guard can see this, because every guard's criterion is local. An external
+re-check also overturned my own reasoning on deletion: I had argued "all 12 have real, recent incident provenance,
+therefore none can be removed" — which mistakes *the past* for *reachability*.
+
+Added:
+- **Rule 26 — a mechanism that serves itself.** Every guard can be true forever inside its own scope while the
+  aggregate budget flows 100% into the machinery. Includes the measured 60-commit breakdown, why the meter must
+  ⛔ **not** be wired into the commit hook (that is one more guard), and why the criterion must be **threshold-free**
+  (the measured 0.67 sat two commits from the 0.70 line).
+- **Rule 27 — fresh is not why you keep it, reachable is.** An incident provenance proves the past, not
+  reachability. Four deletion criteria (unreachable / unrepresentable / superseded / regression-refuted), the
+  external re-check that overturned my reasoning, and the reverse guard: ⛔ never delete on "looks duplicated".
+- **Rule 28 — an intermediary rewrites your text.** Two forms of one family: a backslash eaten by an escape
+  processor (one NUL byte silently flips a text tool to binary), and a backslash folded by a shell heredoc into a
+  real newline (this night: I broke a source file, then broke it the same way twice more, and only **changing the
+  write entry** fixed it).
+
+Changed:
+- `VERSION` → `1.4.0`; README version statements (three languages); pre-commit rule list (+26, +27, +28).
+
+⚠ Note on what was **not** added: of the seven candidate lessons proposed by the external reviewer, several were
+already covered by rules 10 / 05 / 06 (a counted guard must assert its floor; a guard must fail on a known bad
+sample; a guard's exit must not be satisfiable by the sentence it exists to block). They were **not** re-added.
+
+---
+
 ## [1.3.7] — 2026-09-29
 
 **Theme: twice in one night I read a *slice* and then made a claim about the *whole* — the second time I nearly changed code that was already correct.**
