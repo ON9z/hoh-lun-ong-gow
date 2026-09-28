@@ -1,0 +1,27 @@
+agent-lessons v1.3.7 — 2026-09-29
+=================================
+
+WHAT CHANGED
+  + Rule 25: a truncated view is not a total one.
+    No window (head / tail / grep -A|-B|-C / sed -n / paginated reads) can support a claim
+    about the whole. Two instances, same night, different skins — and the second one nearly
+    changed code that was already correct.
+  ~ VERSION 1.3.6 -> 1.3.7 ; README version statements (3 languages) ; pre-commit rule list (+25)
+
+WHY IT MATTERS
+  A window saves time; it does not stand for the whole. "Not in the window" and "not in the
+  object" look identical on screen, so one truncated read silently becomes a conclusion about
+  everything — and the expensive consequence is editing something that was never broken.
+
+FILES TOUCHED
+  guidelines/25-a-truncated-view-is-not-a-total-one.md
+  guidelines/en/25-a-truncated-view-is-not-a-total-one.md
+  CHANGELOG.md · install/core.py · hooks/pre-commit · README.md · AGENTS.md (synced block)
+
+HOW TO VERIFY
+  python install/core.py selfcheck      # structure + zh/en parity + hook list + derived block
+  python tools/leak_scan.py             # full history + commit messages
+  ls guidelines/*.md guidelines/en/*.md # counts must match
+
+VENDOR NEUTRAL
+  No model or vendor is named, required, or assumed.

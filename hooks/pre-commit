@@ -174,7 +174,8 @@ for t in \
   "21 a visible threshold gets optimized away" \
   "22 a delimiter in the content re-partitions the row" \
   "23 a rule you wrote must name where it applies" \
-  "24 list the domain before you search it (grep only answers if you guessed the word)" ; do
+  "24 list the domain before you search it (grep only answers if you guessed the word)" \
+  "25 a truncated view is not a total one (no window can support a claim about the whole)" ; do
   echo "      - $t"
 done
 echo

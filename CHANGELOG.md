@@ -6,6 +6,34 @@ with the single source of truth being `install/core.py: VERSION`.
 
 ---
 
+## [1.3.7] — 2026-09-29
+
+**Theme: twice in one night I read a *slice* and then made a claim about the *whole* — the second time I nearly changed code that was already correct.**
+
+Both failures had the same shape and different skins. First I piped a check's output through `grep | head -14`
+and, not seeing my `FAIL` in those 14 lines, concluded **the check had not fired** — it had; the line was at 81.
+An hour later I read a function with `grep -A 30`, which cut off at line 230 — and the code I then declared
+"broken, here is the fix" was **already fixed at lines 231–251**, in exactly the stretch I never read.
+The comment on that fix was one I had written myself.
+
+The lesson is not "be careful with `head`". It is that **I recorded the first episode as a concrete fact
+about one tool rather than as a category**, so when the mechanism changed its skin I did not recognise it.
+⇒ **Write criteria as categories: this CLASS of action cannot support that CLASS of conclusion.**
+
+Added:
+- **Rule 25 — a truncated view is not a total one.** No window (`head`, `tail`, `grep -A/-B/-C`, `sed -n`,
+  paginated reads) can support a claim about the whole. Includes the two instances above, the boundary with
+  rules 7 / 19 / 24, and the relation to rule 16 (a window is a proxy, and it lies in both directions).
+
+Changed:
+- `VERSION` → `1.3.7`; README version statements (three languages); pre-commit rule list (+25).
+
+Verification:
+- `install/core.py selfcheck` — structure/parity checks pass.
+- `tools/leak_scan.py` — full history + commit messages scanned, clean.
+
+---
+
 ## [1.3.6] — 2026-09-25
 
 **Theme: four times in one day, the thing I "discovered" had already been written down — and three times my version was the weaker one.**
