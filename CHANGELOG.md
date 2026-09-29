@@ -6,6 +6,68 @@ with the single source of truth being `install/core.py: VERSION`.
 
 ---
 
+## [1.5.0] — 2026-09-29
+
+**Theme: the criterion was one notch coarser than the fact — three times in one day — and the third time it pointed at code that was already correct.**
+
+One day produced three instances of the same shape, and a fourth finding that had been argued about for a week.
+In all three, a criterion matched on a **wider unit** than the fact it was asking about, so it swept in things
+that looked exactly like the target. The reported numbers were **146 / 33~44 / 7**; the truths were **26 / 0 / 5**.
+The third one is the reason this gets a rule: those two false positives sat on a **core business path**, so
+acting on the wrong criterion would have changed code that was **already right**. A miss is caught by something;
+a sweep-in is caught by nothing, because what it brings in looks real.
+
+The day also settled a question that had been answered wrongly twice: **optimization work has no "done"**.
+Asked "is the mechanism work finished?", the answer given was "half achieved" — which encouraged continuing.
+The correct answer is that "done" is **undecidable** and "stop" is **decidable**, and the second one was
+written down and put into effect the same day.
+
+### Added
+
+- **Guideline 29 — a criterion must not be coarser than the fact** · `guidelines/29-a-criterion-must-not-be-coarser-than-the-fact.md`
+  Write down `fact_unit` and `match_unit` before producing a number. If the match unit is wider, the output is a
+  **candidate set**, never a count — and upgrading to a count requires **false positives = 0** on known
+  counter-examples. Measured the same day, three times: a "the cell contains a pending word" criterion reported
+  **146** against a truth of **26** (the word appeared inside narrative and quoted history); an "its id appears
+  literally" criterion reported **33~44** against a truth of **0** (the entry point by design lists no bodies,
+  it gives a route); a "does this line contain the string" criterion reported **7** against a truth of **5**
+  (the string was split across two lines — the other line had it). The boundary with 23 is stated: 23 governs
+  **how many places**, this one governs **how wide**.
+
+- **Guideline 30 — optimization has no done, only stop** · `guidelines/30-optimization-has-no-done-only-stop.md`
+  Optimization / research / improvement tasks: `done_when` is forbidden, only `stop_when` is allowed, and it must
+  be "changes of this class = 0 within a fixed window" or "triggering events = 0". "Done / optimal / closed out"
+  is not a stop condition. Measured: an operator asked the same question **twice**; the first answer was "half
+  achieved". The rule also records what does **not** justify unfreezing — "we found N more things to optimize",
+  "the metrics look bad", "it could be more elegant" — because that is only the fact that the work is unbounded.
+
+- **Guideline 31 — an output must not enter its own scan** · `guidelines/31-output-must-not-enter-its-own-scan.md`
+  Check `input_roots ∩ output_roots = ∅` **before running**; non-empty means refuse. If it must be written inside,
+  the same edit must exclude it from the scan / statistics / commit rules and label the exclusion. Measured: a
+  "back up before you change" habit wrote backups into the very directory one tool scans, with an extension that
+  happened to satisfy the rule, so the backups were counted as content. Both screens that were assumed to be
+  protecting it turned out to be guesses, not design: a leading `.` did **not** stop the match (measured
+  difference **0**), and the extension difference held for **only half** the naming schemes.
+
+### Changed
+
+- **Guideline 26 gained an in-flight criterion** · `guidelines/26-a-mechanism-that-serves-itself.md`
+  The window statistic ("of the last N commits, how many touched the system's purpose") is right but **late**.
+  The revision replaces the unit of accounting: declare the **non-machinery deliverable** before starting; during
+  the run, any action that **does not change that deliverable and does not clear a stated blockage** counts as a
+  **machinery action**; the passing condition is **machinery actions = 0**. If it is above zero, that is one
+  in-flight interference, and the only two legitimate exits are to stop or to re-declare the run as a machinery task.
+
+### Fixed
+
+- **`README.md`: the guideline counts had rotted, and one language was seven versions behind.**
+  The English and Simplified sections said **19**; both Traditional sections still said **14**. All three now say
+  **31**, and the three declared versions now say `v1.5.0`. This was invisible because the self-check verifies the
+  CHANGELOG, the VERSION constant, the hook checklist and the guideline sets — and **nothing verifies a number
+  written in prose**.
+
+---
+
 ## [1.4.0] — 2026-09-29
 
 **Theme: the user asked "should there be this many guards?" — and the measurements said the guards were fine, and the machinery was eating everything.**

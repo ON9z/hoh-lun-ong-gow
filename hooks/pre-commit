@@ -178,7 +178,10 @@ for t in \
   "25 a truncated view is not a total one (no window can support a claim about the whole)" \
   "26 a mechanism that serves itself (every guard green, all output back into the machinery)" \
   "27 fresh is not why you keep it (reachable is; four deletion criteria)" \
-  "28 an intermediary rewrites your text (never route metacharacters through it)" ; do
+  "28 an intermediary rewrites your text (never route metacharacters through it)" \
+  "29 a criterion must not be coarser than the fact (wider match unit => candidates, not a count)" \
+  "30 optimization has no done, only stop (done_when is undecidable; write stop_when)" \
+  "31 an output must not enter its own scan (input_roots ∩ output_roots = empty)" ; do
   echo "      - $t"
 done
 echo

@@ -54,3 +54,29 @@ The user asked "**should there be this many guards (I think there is a defect)**
 ⚠ **Common thread**: they all treat "**seeing only a part and taking it for the whole**",
 ⚠ and **this one is the most expensive**: 13 / 20 cost you **a class of objects** or **one path**,
 **this one costs you 【the entire budget of the system】 — and it looks like it is working, every single second.**
+
+---
+
+## ⭐⭐ Revision (2026-09-29): move the measurement from a **static count** to an **in-flight interference count**
+
+⚠ The window statistic above — "of the last N commits, how many touched the system's purpose" — is a
+**window statistic**. ⭐ It **is right, but it is late**: ⚠ it is **after the fact**, ⚠ and **the cost was
+paid while the real work was happening** ✓
+
+⭐⭐ **In-flight criterion (⚠ decidable on the spot, ⛔ no window needed)**:
+
+```
+① Before starting: declare the 【non-machinery deliverable】 of this run.
+② During it: any action that does 【not change that deliverable】 and 【does not clear a stated
+   blockage】 counts as one 【machinery action】.
+③ Passing condition: machinery actions = 0.
+```
+
+⚠ **If machinery actions > 0** ⇒ ⭐ that **is one in-flight interference** ⇒ **only two legitimate exits**:
+**stop, or re-declare this run as a machinery task** (⚠ ⛔ not "I'll just do this one thing on the way").
+
+⭐ In one line: **while doing the real work, any action that does not advance it is the machinery borrowing this run.**
+
+⚠ **The unit of accounting therefore changes**:
+- ⚠ old: **share of machinery output** (⚠ it drifts toward 100% by itself, while **every day looks like progress**)
+- ⭐ new: **in one non-machinery task, machinery actions / rework rounds** (⚠ **it is 0 or it is not, on the spot**) ✓

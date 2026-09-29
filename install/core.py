@@ -44,7 +44,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "1.4.0"
+VERSION = "1.5.0"
 # ⚠ 版本号是**单一事实源**：它渲染进注入块的 `BEGIN vX.Y.Z` 标记行（`AGENTS.md:1`）。
 #   1.3.7 → 1.4.0（2026-09-29）：新增准则 26（**机制自我服务率** —— 长期自动化系统的机制会
 #   吃掉全部产能，而每条守卫都报绿，因为没有任何守卫在量「力气花到哪了」）、
