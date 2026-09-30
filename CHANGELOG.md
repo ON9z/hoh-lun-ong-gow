@@ -30,6 +30,16 @@ to-dos, items waiting on an external person, items waiting on an external condit
 never be closed, items already done but not closed, and items with no re-check trace. **Optimising that total
 as a KPI produces a reverse incentive** — the cheapest way to lower it is to close things wrongly.
 
+A layer harder than "dearer" sits under that price difference, and it corrects how the net-0 figure above should
+be read. In that system, lowering the open-item count is **blocked by an explicit rule** — the rule reads,
+verbatim: "the leading marker is the item's own declaration; you may not change it to change the count". So
+closing an item is not merely expensive, it is **not permitted by default**. That rule is itself correct: what
+it blocks is exactly the "close things wrongly so the number looks good" move. **But its price is that the count
+cannot fall quickly, by design.** ⇒ a net-0 window **neither proves idleness nor proves the machinery is
+broken** — it may simply be a number that does not accept cleanup. The right response is not to drive it down,
+but to do the genuinely actionable items and move the non-actionable ones (waiting on an external person, on an
+external condition, periodic and never closable, explicitly held) off the main list.
+
 ### Changed
 
 - **Guideline 26 gained its second revision — the pricing that makes the machinery eat the budget** ·
@@ -37,7 +47,9 @@ as a KPI produces a reverse incentive** — the cheapest way to lower it is to c
   The criterion is a price comparison: **"In this machinery, what does the correct action have to pay — and
   what does the cheaper action that replaces it have to pay?"** If the cheaper one is cheaper *and* the correct
   one additionally carries risk, the agent will systematically do only the cheaper one. Includes the 3.6-hour
-  window breakdown, the net-0 result, and the composite-metric warning above. The boundary with rules 30 and 13
+  window breakdown, the net-0 result, the composite-metric warning, and the harder layer beneath the price
+  difference (closing is not merely dearer — it is blocked by an explicit rule, so a net-0 window neither proves
+  idleness nor proves breakage). The boundary with rules 30 and 13
   is stated: **30** governs what counts as a stop condition, **13** governs what a single guard fails to
   reclaim; this revision governs **which of two available actions the machinery makes cheaper**.
 - `VERSION` → `1.5.1`; README version statements (three languages); derived block re-synced with

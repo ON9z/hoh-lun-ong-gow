@@ -95,6 +95,18 @@ while **re-checking** one item **collides with nothing** ⇒ ⭐ **both produce 
 reduces the open-item count** ✓
 ⇒ so **rationally picking the cheaper one** is exactly **what this machinery incentivises** ✓
 
+⭐ **And a layer harder than "dearer" (added 2026-10-01, ⚠ first-hand measurement)**: in that system, **lowering the
+open-item count is blocked by an explicit rule** — the rule reads, verbatim: "**the leading marker is the item's
+own declaration — you may not change it to change the count**".
+⇒ ⭐ **So "closing one" is not 【expensive】, it is 【not permitted by default】** ✓
+⚠ And that rule **is itself correct** (what it blocks is exactly "close things wrongly so the number looks good")
+⇒ ⭐ **but its price is that the count 【cannot fall quickly, by design】**,
+⭐ so **seeing "net 0" over a given window neither proves idleness nor proves the machinery is broken** —
+⚠ **it may simply be 【a number that does not accept cleanup by design】** ✓
+⇒ ⭐⭐ **The right move is not to drive it down, but to**: ① do the ones that are **genuinely actionable**
+② move the **non-actionable** ones (waiting on an external person / on an external condition / periodic and never
+closable / explicitly held) **off the main list** ✓
+
 ⚠ **⚠ And it is very hard to notice, because 【both actions look like work】**:
 every commit is genuine, every one has wording, every one passes the checks, ⭐ it is just that **they changed no state at all**.
 
