@@ -55,7 +55,7 @@ external condition, periodic and never closable, explicitly held) off the main l
 - `VERSION` → `1.5.1`; README version statements (three languages); derived block re-synced with
   `sync --agent generic`.
 
-### Verification
+Verification:
 
 - `install/core.py selfcheck` — run **before** the change (all green) and **after** (all green); both outputs
   are recorded in the release report. The pre-change run matters: without it, "green afterwards" would not
