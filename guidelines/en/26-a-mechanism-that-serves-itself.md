@@ -80,3 +80,37 @@ paid while the real work was happening** ✓
 ⚠ **The unit of accounting therefore changes**:
 - ⚠ old: **share of machinery output** (⚠ it drifts toward 100% by itself, while **every day looks like progress**)
 - ⭐ new: **in one non-machinery task, machinery actions / rework rounds** (⚠ **it is 0 or it is not, on the spot**) ✓
+
+---
+
+## ⭐⭐ Revision (2026-10-01): the **pricing** that makes the machinery eat the budget — closing is dearer than re-checking
+
+判据：**"In this machinery, what does 【the correct action】 have to pay — and what does 【the cheaper action that replaces it】 have to pay?"**
+⚠ **If the latter is cheaper, and the former additionally carries risk ⇒ the agent will systematically do only the latter** ✓
+
+**⇒ Why** (this is the half this rule was missing — the first two revisions said "the machinery eats the budget", ⛔ they never said **why it gets selected**):
+in this machinery, **closing** one item means **registering an exemption item by item** (⚠ it collides with a
+guard, it needs a human to read it, it needs a citation);
+while **re-checking** one item **collides with nothing** ⇒ ⭐ **both produce a "commit", and only the former
+reduces the open-item count** ✓
+⇒ so **rationally picking the cheaper one** is exactly **what this machinery incentivises** ✓
+
+⚠ **⚠ And it is very hard to notice, because 【both actions look like work】**:
+every commit is genuine, every one has wording, every one passes the checks, ⭐ it is just that **they changed no state at all**.
+
+**Instance (single-operator single-machine automated system, measured 2026-10-01)**: ⭐ measured over a **3.6-hour / 51-commit** window:
+
+| Category | Commits | Share |
+|---|---|---|
+| Machinery / records (handoff anchor · snapshots · design docs · memory · skills) | 20 | 39% |
+| Task · **read-only re-checking** (re-checking / recomputing / correcting wording, **changes no state**) | 15 | 29% |
+| Task · action (implementing / opening a work item / registering into a queue) | 10 | 20% |
+| Unclassified | 6 | 12% |
+
+⭐ **And of those 10 "action" commits, only 2 actually brought the open-item count down** ⇒
+⭐⭐ **the net result of 3.6 hours = 2 closed · 2 opened = net 0** ✓
+
+⭐ **Plus one of the same origin**: that "open-item total" is itself a **composite metric** — it mixes
+genuine to-dos / waiting on an external person / waiting on an external condition / **periodic, never closable** / **done but not closed** / no re-check trace
+⇒ ⚠ **optimising it as a KPI produces a reverse incentive** (⭐ e.g. **closing items wrongly** to bring the number down) ✓
+⇒ ⭐ **The right move: bucket by "can this be acted on" first, ⭐ watch 【the actionable bucket】, ⛔ not the total** ✓

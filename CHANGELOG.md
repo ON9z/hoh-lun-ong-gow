@@ -6,6 +6,52 @@ with the single source of truth being `install/core.py: VERSION`.
 
 ---
 
+## [1.5.1] — 2026-10-01
+
+**Theme: the machinery does not eat the budget because it is badly built — it eats the budget because closing is dearer than re-checking.**
+
+This is the third revision of rule 26, and the first one to answer a question the earlier two left open.
+Revisions 1 and 2 established **what happens** (every guard green, the whole budget flowing back into the
+machinery) and **how to measure it** (an in-flight interference count, decidable on the spot). Neither said
+**why the machinery action gets selected in the first place**.
+
+The answer is a price difference. Inside this machinery, **closing** an item requires registering an exemption
+item by item — it collides with a guard, it needs a human to read it, it needs a citation. **Re-checking** an
+item collides with nothing. Both produce a commit; only the first reduces the open-item count. So picking the
+cheaper one is not a lapse of discipline — it is **what the machinery pays for**.
+
+The measurement: a **3.6-hour / 51-commit** window. **39%** machinery and records (handoff anchor, snapshots,
+design docs, memory, skills), **29%** read-only re-checking that changed no state, **20%** action. Of those
+10 action commits, **only 2 actually brought the open-item count down** — and 2 new items were opened in the
+same window ⇒ **net 0**. Every commit was genuine, every one had wording, every one passed its checks.
+
+Recorded alongside, from the same origin: the **open-item total is a composite metric**. It mixes genuine
+to-dos, items waiting on an external person, items waiting on an external condition, periodic items that can
+never be closed, items already done but not closed, and items with no re-check trace. **Optimising that total
+as a KPI produces a reverse incentive** — the cheapest way to lower it is to close things wrongly.
+
+### Changed
+
+- **Guideline 26 gained its second revision — the pricing that makes the machinery eat the budget** ·
+  `guidelines/26-a-mechanism-that-serves-itself.md` and `guidelines/en/26-a-mechanism-that-serves-itself.md`
+  The criterion is a price comparison: **"In this machinery, what does the correct action have to pay — and
+  what does the cheaper action that replaces it have to pay?"** If the cheaper one is cheaper *and* the correct
+  one additionally carries risk, the agent will systematically do only the cheaper one. Includes the 3.6-hour
+  window breakdown, the net-0 result, and the composite-metric warning above. The boundary with rules 30 and 13
+  is stated: **30** governs what counts as a stop condition, **13** governs what a single guard fails to
+  reclaim; this revision governs **which of two available actions the machinery makes cheaper**.
+- `VERSION` → `1.5.1`; README version statements (three languages); derived block re-synced with
+  `sync --agent generic`.
+
+### Verification
+
+- `install/core.py selfcheck` — run **before** the change (all green) and **after** (all green); both outputs
+  are recorded in the release report. The pre-change run matters: without it, "green afterwards" would not
+  distinguish "nothing broke" from "the check was never running".
+- `tools/leak_scan.py` — working tree + full history + commit messages.
+
+---
+
 ## [1.5.0] — 2026-09-29
 
 **Theme: the criterion was one notch coarser than the fact — three times in one day — and the third time it pointed at code that was already correct.**
