@@ -44,7 +44,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-VERSION = "1.5.1"
+VERSION = "1.5.2"
 # ⚠ 版本号是**单一事实源**：它渲染进注入块的 `BEGIN vX.Y.Z` 标记行（`AGENTS.md:1`）。
 #   1.5.0 → 1.5.1（2026-10-01）：准则 26 的**第二次修订** —— **机制吃产能的定价机制**
 #   （**「复核便宜，关闭贵」**：关闭一条要逐条登记豁免、会撞守卫、要人读、要引用；

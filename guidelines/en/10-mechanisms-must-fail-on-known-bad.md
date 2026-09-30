@@ -93,3 +93,49 @@ PASS  "... py-spy is not installed."         <- an excuse
 
 **=> In one line**: **the step that tightens a criterion must rest on the *measured shape of real
 evidence*; otherwise you have only moved the gate somewhere else.**
+
+---
+
+**⚠️ One more shape: the fix moved the result into a third state that "does not count as a failure".**
+
+**Measured (2026-10-01)**: a criterion had been **red all along** (a false positive). After I fixed it,
+**the tests went to 12 passed, all green.**
+
+⚠ **But I did not declare it fixed on that basis** -- I printed **which state that row actually landed in**,
+and it had become `UNCLASSIFIED`, with a note reading, verbatim, "**cannot be judged (⛔ not a pass)**".
+
+**⭐ Root cause**: the criterion is **three-valued** (**pass / fail / cannot-judge**), and
+**the consumer collects only the "fail" slice**:
+
+```python
+fails = [f for f in rows if f.severity == "FAIL"]
+```
+
+⇒ **"cannot be judged" never enters `fails`, and never raises an error either.**
+⇒ So what that "fix" actually did was **trade a loud false positive for a quiet vacuous satisfaction.**
+
+**⭐ Criterion (the new move this guideline is adding)**: **after a fix, ⛔ do not ask "is it green" --
+ask "why is it green now"** -- print **the state it actually landed in** and read that,
+⛔ instead of only looking at pass / fail.
+
+**⭐ What the reverse clamp looks like here**: add an assertion that **pins "green" to the correct state**:
+
+```python
+assert row["severity"] == "OK"       # ✅ pinned to the correct state
+assert row["severity"] != "FAIL"     # ⛔ the loose side: landing on UNCLASSIFIED still passes (see guideline 05)
+```
+
+**⚠ Known-bad-input evidence (the actual output of this run)**: after breaking the "correct state" --
+**1 failed, 1 passed**: the red one is **the new pinning assertion**; ⭐ and
+**the pre-existing "a good sample does not error" test `passed` in that same run**
+⇒ which is exactly the proof that **without the new assertion, nobody would ever notice this kind of
+vacuous satisfaction.**
+
+**⚠ Boundary (⛔ do not read it as "the system itself lets things through silently")**:
+**"cannot be judged" not being in the failure set != the whole system being blind** -- the same script has a
+`--strict` exit that **counts "cannot be judged" as a non-zero exit too**.
+⇒ The gap is in **that consumer's assertion**, ⛔ not in "the system silently lets it through".
+(⚠ **Reading a design decision as a defect is another kind of error.**)
+
+**⇒ In one line**: **"it went green" is not a conclusion, it is a phenomenon awaiting an explanation --
+which state it went green in is the conclusion.**

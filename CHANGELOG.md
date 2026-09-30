@@ -6,6 +6,54 @@ with the single source of truth being `install/core.py: VERSION`.
 
 ---
 
+## [1.5.2] — 2026-10-01
+
+**Theme: "the test went green" is not the conclusion — which state it went green in is.**
+
+Guideline 10 already carried one shape of this family, recorded a version earlier: when you fix a check that is
+"vacuously satisfiable", you very easily build another vacuously satisfiable check. This revision adds a
+**second, differently shaped** instance: the vacuous satisfaction hides in a **state the consumer never
+collects**, not in a criterion that a single sentence can satisfy.
+
+The measurement: a criterion had been **red all along** (a false positive). After the fix the suite reported
+**12 passed, all green**. Printing the state that row **actually landed in** showed `UNCLASSIFIED` instead,
+with a note reading, verbatim, "cannot be judged (⛔ not a pass)". The criterion is **three-valued**
+(pass / fail / cannot-judge), and **the consumer collects only the `FAIL` slice** — so "cannot be judged"
+never enters the failure set and never raises an error either. What the "fix" actually achieved was
+**trading a loud false positive for a quiet vacuous satisfaction**.
+
+The counter-evidence is what makes this a rule rather than an anecdote. The pinning assertion
+(`== "OK"`, not `!= "FAIL"`) was fed a broken correct-state: **1 failed, 1 passed** — the red one was the new
+assertion, while the pre-existing "a good sample does not error" test **passed in that same run**. ⇒ Without
+the new assertion, this class of vacuous satisfaction is invisible to everyone.
+
+The boundary is stated so the finding is not over-read: "cannot be judged" not being in the failure set is
+**not** the whole system going blind — the same script has a `--strict` exit that counts it as a non-zero
+exit too. The gap is in **that consumer's assertion**, not in the design.
+
+### Changed
+
+- **Guideline 10 gained a second, differently shaped instance — the fix moved the result into a third state
+  that does not count as a failure** ·
+  `guidelines/10-mechanisms-must-fail-on-known-bad.md` and `guidelines/en/10-mechanisms-must-fail-on-known-bad.md`
+  The new move: **after a fix, do not ask "is it green" — ask "why is it green now"**, and print the state the
+  row actually landed in instead of only reading pass/fail. Includes the three-valued criterion and the
+  consumer that collects a single slice, the pinning-assertion shape (`assert row["severity"] == "OK"`, which
+  keeps guideline 05's "one-sided assertions are blind to loosening" from applying unnoticed), the feed
+  evidence (**1 failed / 1 passed**, with the pre-existing test green in the same run), and the boundary
+  (a `--strict` exit does count "cannot be judged"; the gap is in the consumer's assertion, not in the system).
+- `VERSION` → `1.5.2`; README version statements (three languages); derived block re-synced with
+  `sync --agent generic`.
+
+Verification:
+
+- `install/core.py selfcheck` — run **before** the change (all green, exit 0) and **after** (all green,
+  exit 0). The pre-change run matters: without it, "green afterwards" would not distinguish "nothing broke"
+  from "the check was never running".
+- `tools/leak_scan.py` — real hits = 0, on the working tree + full history + commit messages.
+
+---
+
 ## [1.5.1] — 2026-10-01
 
 **Theme: the machinery does not eat the budget because it is badly built — it eats the budget because closing is dearer than re-checking.**

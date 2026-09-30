@@ -1,5 +1,5 @@
-<!-- agent-lessons:BEGIN v1.5.1 teams=ask -->
-# 工程准则（agent-lessons v1.5.1）
+<!-- agent-lessons:BEGIN v1.5.2 teams=ask -->
+# 工程准则（agent-lessons v1.5.2）
 
 以下由 `guidelines/*.md` **派生**（请勿手改本块；改准则后跑 `install/core.py sync`）。
 
